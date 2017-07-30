@@ -10,6 +10,16 @@ defmodule ExFixInitiator do
 
     alias ExFix.Types.Message
 
+    @tag_account       "1"
+    @tag_cl_ord_id     "11"
+    @tag_order_qty     "38"
+    @tag_ord_type      "40"
+    @tag_price         "44"
+    @tag_side          "54"
+    @tag_symbol        "55"
+    @tag_time_in_force "59"
+    @tag_transact_time "60"
+
     def before_logon(_fix_session_name, _fields), do: :ok
 
     def on_logon(fix_session_name, _pid) do
@@ -17,15 +27,15 @@ defmodule ExFixInitiator do
       for x <- 1..10_000 do
         spawn(fn() ->
           fields = [
-            {"1", 1234},           # Account
-            {"11", "cod12345"},    # ClOrdID
-            {"38", 10},            # OrderQty
-            {"40", "2"},           # OrdType
-            {"44", 1.23},          # Price
-            {"54", "1"},           # Side
-            {"55", "SYM1"},        # Symbol
-            {"59", "0"},           # TimeInForce
-            {"60", DateTime.utc_now}, # TransactTime
+            {@tag_account, 1234},
+            {@tag_cl_ord_id, "cod12345"},
+            {@tag_order_qty, 10},
+            {@tag_ord_type, "2"},
+            {@tag_price, 1.23},
+            {@tag_side, "1"},
+            {@tag_symbol, "SYM1"},
+            {@tag_time_in_force, "0"},
+            {@tag_transact_time, DateTime.utc_now},
           ]
           ExFix.send_message!(fix_session_name, "D", fields)
         end)
