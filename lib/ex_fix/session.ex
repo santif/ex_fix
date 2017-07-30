@@ -427,6 +427,7 @@ defmodule ExFix.Session do
     mapper = fn({_seq, msg}) -> msg end
     out_queue
     |> :ets.tab2list()
-    |> Enum.filter_map(filter, mapper)
+    |> Enum.filter(filter)
+    |> Enum.map(mapper)
   end
 end

@@ -182,7 +182,7 @@ defmodule ExFix.SessionWorker do
     host = config.socket_connect_host
     port = config.socket_connect_port
     Logger.debug fn -> "[#{fix_session_name}] Trying to connect to #{host}:#{port}..." end
-    str_host = String.to_char_list(host)
+    str_host = String.to_charlist(host)
     options = [mode: :binary] ++ config.connection_options
     {transport, result} = case config.socket_use_ssl do
       true -> {:ssl, :ssl.connect(str_host, port, options)}
