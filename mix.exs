@@ -22,7 +22,7 @@ defmodule ExFix.Mixfile do
 
   defp description do
     """
-    FIX Session Protocol FIXT.1.1 implementation in Elixir
+    Elixir implementation of FIX Session Protocol FIXT.1.1
     """
   end
 
