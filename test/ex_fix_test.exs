@@ -1,6 +1,5 @@
 defmodule ExFix.ExFixTest do
   use ExUnit.Case
-  import ExFix.TestHelper
 
   alias ExFix.SessionRegistry
   alias ExFix.{Parser, Serializer}
@@ -121,7 +120,7 @@ defmodule ExFix.ExFixTest do
     ExFix.stop_session("session2")
   end
 
-  test "Session - disconnection" do
+  test "Session - disconnection (TCP)" do
     ExFix.start_session_initiator("session3", "SENDER", "TARGET", FixEmptyApplication,
       transport_mod: TestTransport, transport_options: [test_pid: self()])
     assert_receive {:data, logon_msg}
@@ -138,21 +137,17 @@ defmodule ExFix.ExFixTest do
       {"141", true}, {"553", "usr1"}, {"554", "pwd1"},
       {"1137", "9"}]}
     |> Serializer.serialize(now)
-    TestTransport.receive_data("session3", received_logon_msg, :ssl)
+    TestTransport.receive_data("session3", received_logon_msg, :tcp)
 
     Process.sleep(20)
     assert SessionRegistry.get_session_status("session3") == :connected
 
-    TestTransport.disconnect("session3", :ssl)
+    TestTransport.disconnect("session3", :tcp)
     Process.sleep(20)
     assert SessionRegistry.get_session_status("session3") == :reconnecting
-
-    # ExFix.stop_session("session3")
-    # Process.sleep(20)
-    # assert SessionRegistry.get_session_status("session3") == :disconnected
   end
 
-  test "Session - timeout" do
+  test "Session - disconnection (SSL)" do
     ExFix.start_session_initiator("session4", "SENDER", "TARGET", FixEmptyApplication,
       transport_mod: TestTransport, transport_options: [test_pid: self()])
     assert_receive {:data, logon_msg}
@@ -169,19 +164,46 @@ defmodule ExFix.ExFixTest do
       {"141", true}, {"553", "usr1"}, {"554", "pwd1"},
       {"1137", "9"}]}
     |> Serializer.serialize(now)
-    TestTransport.receive_data("session4", received_logon_msg, :tcp)
+    TestTransport.receive_data("session4", received_logon_msg, :ssl)
 
     Process.sleep(20)
     assert SessionRegistry.get_session_status("session4") == :connected
 
-    TestTransport.receive_msg("session4", {:timeout, :tx})
+    TestTransport.disconnect("session4", :ssl)
+    Process.sleep(20)
+    assert SessionRegistry.get_session_status("session4") == :reconnecting
+  end
+
+  test "Session - timeout" do
+    ExFix.start_session_initiator("session5", "SENDER", "TARGET", FixEmptyApplication,
+      transport_mod: TestTransport, transport_options: [test_pid: self()])
+    assert_receive {:data, logon_msg}
+    assert SessionRegistry.get_session_status("session5") == :connecting
+    assert "8=FIXT.1.1" <> _ = logon_msg
+
+    msg = Parser.parse(logon_msg, DefaultDictionary, 1)
+    assert msg.valid
+
+    now = DateTime.utc_now()
+    received_logon_msg = %MessageToSend{seqnum: 1, sender: "TARGET",
+      orig_sending_time: now, target: "SENDER",
+      msg_type: "A", body: [{"98", "0"}, {"108", 120},
+      {"141", true}, {"553", "usr1"}, {"554", "pwd1"},
+      {"1137", "9"}]}
+    |> Serializer.serialize(now)
+    TestTransport.receive_data("session5", received_logon_msg, :tcp)
+
+    Process.sleep(20)
+    assert SessionRegistry.get_session_status("session5") == :connected
+
+    TestTransport.receive_msg("session5", {:timeout, :tx})
     Process.sleep(20)
 
     assert_receive {:data, hb_msg}
-    assert SessionRegistry.get_session_status("session4") == :connected
+    assert SessionRegistry.get_session_status("session5") == :connected
 
     msg = Parser.parse(hb_msg, DefaultDictionary)
     assert msg.msg_type == "0"
-    ExFix.stop_session("session4")
+    ExFix.stop_session("session5")
   end
 end
