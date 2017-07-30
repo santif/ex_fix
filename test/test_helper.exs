@@ -36,9 +36,12 @@ defmodule ExFix.TestHelper do
       Process.send(conn, {:data, data}, [])
     end
     def close(_conn), do: :ok
-    def receive(session_name, data, socket_protocol \\ :tcp) do
+    def receive_data(session_name, data, socket_protocol \\ :tcp) do
       Process.send(:"ex_fix_session_#{session_name}",
         {socket_protocol, self(), data}, [])
+    end
+    def receive_msg(session_name, msg) do
+      Process.send(:"ex_fix_session_#{session_name}", msg, [])
     end
     def disconnect(session_name, socket_protocol \\ :tcp) do
       Process.send(:"ex_fix_session_#{session_name}",
