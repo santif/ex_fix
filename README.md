@@ -19,7 +19,7 @@ end
 
 ## Features
 
-- FIXT 1.1 session protocol implementation (session level)
+- FIXT.1.1 session protocol implementation (session level messages)
 - Message validation: sequence number, length, checksum
 - Auto reconnection
 - SSL compatible
@@ -30,9 +30,9 @@ end
 ## Two-phase parse
 
 This library allows to parse the FIX message until certain tags are found. At that
-point it is possible to send the message to another process (example, a Book process,
-Account process, etc) to complete the parse and execute business logic specifically
-for the message's `subject`.
+point it is possible to send the message to another process (for example, a Book process,
+Account process, etc) to complete the parse and execute business logic specifically for
+the message's `subject`.
 
 As can be seen in the benchmarks below, the two-phase parse substantially decreases
 the time spent in the network client process.
