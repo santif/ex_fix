@@ -40,11 +40,17 @@ defmodule ExFix.ExFixTest do
 
   test "Session initiator simple test" do
     ExFix.start_session_initiator("session1", "SENDER", "TARGET", TestApplication,
-      transport_mod: TestTransport, logon_username: "usr1", logon_password: "pwd1",
-      transport_options: [test_pid: self()])
+      logon_username: "usr1", logon_password: "pwd1", log_incoming_msg: true,
+      log_outgoing_msg: true, reset_on_logon: true, heart_bt_int: 10,
+      reconnect_interval: 5, validate_incoming_message: true,
+      time_service: nil, default_applverid: "9", logon_encrypt_method: "0",
+      socket_connect_host: "host1", socket_connect_port: 0,
+      transport_mod: TestTransport, transport_options: [test_pid: self()])
+
     assert_receive {:data, logon_msg}
     assert SessionRegistry.get_status() == %{"session1" => :connecting}
     assert "8=FIXT.1.1" <> _ = logon_msg
+
     msg = Parser.parse(logon_msg, DefaultDictionary, 1)
     assert msg.valid
 
@@ -57,7 +63,7 @@ defmodule ExFix.ExFixTest do
     |> Serializer.serialize(now)
 
     TestTransport.receive(:"ex_fix_session_session1", received_logon_msg)
-    Process.sleep(50)
+    Process.sleep(25)
     assert SessionRegistry.get_status() == %{"session1" => :connected}
 
     ## Send New Order Single
@@ -78,7 +84,34 @@ defmodule ExFix.ExFixTest do
     assert_receive {:data, new_order_single}
     assert "8=FIXT.1.1" <> _ = new_order_single
 
-    SessionRegistry.stop_session("session1")
+    ## Receive Execution Report
+    now = DateTime.utc_now()
+    er_body = [
+      {"1", 531},
+      {"11", 99},
+      {"14", 5},
+      {"17", 872},
+      {"31", 1.2},
+      {"32", 5},
+      {"37", 456},
+      {"38", 5},
+      {"39", 2},
+      {"54", 1},
+      {"55", "ABC"},
+      {"150", "F"},
+      {"151", 0},
+    ]
+    received_logon_msg = %MessageToSend{seqnum: 2, sender: "TARGET",
+      orig_sending_time: now, target: "SENDER",
+      msg_type: "8", body: er_body}
+    |> Serializer.serialize(now)
+
+    TestTransport.receive(:"ex_fix_session_session1", received_logon_msg)
+
+    Process.sleep(25)
+    assert SessionRegistry.get_status() == %{"session1" => :connected}
+
+    ExFix.stop_session("session1")
     assert SessionRegistry.get_status() == %{}
   end
 end
