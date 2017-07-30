@@ -1,11 +1,11 @@
 defmodule ExFix.SessionTimer do
 
   @doc """
-  Sends a message `{:timeout, name}` when no messages are received for a certain time in seconds.
+  Sends a message `{:timeout, name}` when no messages are received for a certain time.
   """
   @spec setup_timer(term(), non_neg_integer()) :: pid()
-  def setup_timer(name, interval_seconds) do
-    spawn_link(__MODULE__, :timer_loop, [name, interval_seconds * 1_000, self()])
+  def setup_timer(name, interval_ms) do
+    spawn_link(__MODULE__, :timer_loop, [name, interval_ms, self()])
   end
 
   @doc """
