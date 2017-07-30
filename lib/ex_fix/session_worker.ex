@@ -183,7 +183,7 @@ defmodule ExFix.SessionWorker do
     port = config.socket_connect_port
     Logger.debug fn -> "[#{fix_session_name}] Trying to connect to #{host}:#{port}..." end
     str_host = String.to_charlist(host)
-    options = [mode: :binary] ++ config.connection_options
+    options = [mode: :binary] ++ config.transport_options
     case config.transport_mod.connect(str_host, port, options) do
       {:ok, client} ->
         tx_timer = SessionTimer.setup_timer(:tx, session.config.heart_bt_int * 1_000)
