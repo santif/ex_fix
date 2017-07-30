@@ -7,10 +7,13 @@ defmodule ExFix.SessionWorker do
   use GenServer
   alias ExFix.SessionRegistry
   alias ExFix.Session
+  alias ExFix.Types.SessionConfig
   alias ExFix.Serializer
   alias ExFix.SessionTimer
 
   @compile {:inline, handle_data: 5}
+
+  @rx_heartbeat_tolerance 1.2  # Heartbeat interval + 20%
 
   defmodule State do
     @moduledoc false
@@ -65,16 +68,16 @@ defmodule ExFix.SessionWorker do
   end
 
   def handle_info({:ssl, _socket, data}, %State{transport: transport, client: client,
-      session: session, rx_timer: rx_timer} = state) do
+      session: session} = state) do
     handle_data(data, transport, client, session, state)
   end
 
   def handle_info({:tcp, _socket, data}, %State{transport: transport, client: client,
-      session: session, rx_timer: rx_timer} = state) do
+      session: session} = state) do
     handle_data(data, transport, client, session, state)
   end
 
-  def handle_info({:init, action, config}, %State{name: fix_session_name} = state) do
+  def handle_info({:init, action, config}, state) do
     case action do
       :ok ->
         connect_and_send_logon(config, state)
@@ -82,7 +85,7 @@ defmodule ExFix.SessionWorker do
         Logger.info "Waiting #{config.reconnect_interval} seconds to reconnect..."
         Process.sleep(config.reconnect_interval * 1_000)
         connect_and_send_logon(config, state)
-      {:error, reason} ->
+      {:error, _reason} ->
         {:stop, :normal, state}
     end
   end
@@ -102,7 +105,7 @@ defmodule ExFix.SessionWorker do
     {:reply, :ok, %State{state | session: session}}
   end
 
-  def handle_call(:stop, _from, %State{transport: transport, client: client, session: session} = state) do
+  def handle_call(:stop, _from, %State{transport: transport, client: client} = state) do
     # TODO logout
     transport.close(client)
     {:reply, :ok, state}
@@ -127,12 +130,12 @@ defmodule ExFix.SessionWorker do
   ##
 
   defp handle_data(data, transport, client, session, %State{name: name,
-      log_outgoing_msg: log_outgoing_msg, tx_timer: tx_timer, rx_timer: rx_timer} = state) do
+      rx_timer: rx_timer} = state) do
     case Session.handle_incoming_data(session, data) do
       {:ok, [], session2} ->
-        unless rx_timer do
-          rx_timer = SessionTimer.setup_timer(:rx, round(session.config.heart_bt_int * 1.2))
-          SessionRegistry.session_update_status(name, :connected)
+        rx_timer = case rx_timer do
+          nil -> setup_rx_timer(session)
+          value -> value
         end
         send(rx_timer, :msg)
         {:noreply, %State{state | session: session2, rx_timer: rx_timer}}
@@ -196,5 +199,12 @@ defmodule ExFix.SessionWorker do
         Logger.error "Cannot open socket: #{inspect reason}"
         {:stop, reason, state}
     end
+  end
+
+  defp setup_rx_timer(%Session{config: %SessionConfig{name: name, heart_bt_int: heart_bt_int}}) do
+    interval = round(heart_bt_int * @rx_heartbeat_tolerance)
+    rx_timer = SessionTimer.setup_timer(:rx, interval)
+    SessionRegistry.session_update_status(name, :connected)
+    rx_timer
   end
 end

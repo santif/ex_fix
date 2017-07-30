@@ -73,7 +73,6 @@ defmodule ExFix.SessionTest do
     assert queued_message.error_reason == nil
     assert queued_message.seqnum == 12
     assert queued_message.msg_type == "D"
-    ## TODO validar que el estado sea que se envió un ResendRequest
   end
 
   test "MsgSeqNum lower than expected without PossDupFlag set to Y (p. 49)", %{config: cfg} do
@@ -475,7 +474,8 @@ defmodule ExFix.SessionTest do
     |> Session.handle_incoming_data(incoming_data)
 
     assert length(msgs_to_send) == 3
-    ## TODO verificaciones posteriores
+    assert Session.get_status(session) == :online
+    ## TODO asserts
   end
 
   test "SeqResetGapFill with NewSeqNo>MsgSeqNum AND MsgSeqNum>Expected (p. 56)", %{config: cfg} do

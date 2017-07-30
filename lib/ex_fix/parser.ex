@@ -48,8 +48,7 @@ defmodule ExFix.Parser do
           original_fix_msg: orig_msg, error_reason: :garbled}
     end
   end
-  def parse1(<<"8=", rest::binary()>> = orig_msg, _dictionary, _expected_seqnum, _validate) do
-    [begin_string, rest1] = :binary.split(rest, << @soh >>)
+  def parse1(<<"8=", _rest::binary()>> = orig_msg, _dictionary, _expected_seqnum, _validate) do
     %Message{valid: false, msg_type: nil, seqnum: nil,
       other_msgs: "", original_fix_msg: orig_msg,
       error_reason: :begin_string_error}
