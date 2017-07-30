@@ -77,7 +77,7 @@ defmodule ExFix.Types do
       max_output_buf_count: 1_000,
       reconnect_interval: 15,
       reset_on_logon: true,
-      socket_use_ssl: true,
+      transport_mod: :ssl,
       validate_incoming_message: true,
       connection_options: [],
       time_service: nil

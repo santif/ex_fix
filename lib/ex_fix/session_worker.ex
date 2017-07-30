@@ -184,16 +184,12 @@ defmodule ExFix.SessionWorker do
     Logger.debug fn -> "[#{fix_session_name}] Trying to connect to #{host}:#{port}..." end
     str_host = String.to_charlist(host)
     options = [mode: :binary] ++ config.connection_options
-    {transport, result} = case config.socket_use_ssl do
-      true -> {:ssl, :ssl.connect(str_host, port, options)}
-      false -> {:gen_tcp, :gen_tcp.connect(str_host, port, options)}
-    end
-    case result do
+    case config.transport_mod.connect(str_host, port, options) do
       {:ok, client} ->
         tx_timer = SessionTimer.setup_timer(:tx, session.config.heart_bt_int * 1_000)
-        do_send_messages(transport, client, msgs_to_send, fix_session_name,
+        do_send_messages(config.transport_mod, client, msgs_to_send, fix_session_name,
           log_outgoing_msg, tx_timer)
-        {:noreply, %State{state | transport: transport, client: client,
+        {:noreply, %State{state | transport: config.transport_mod, client: client,
           session: session, tx_timer: tx_timer}}
       {:error, reason} ->
         Logger.error "Cannot open socket: #{inspect reason}"

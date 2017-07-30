@@ -43,7 +43,7 @@ end
 
 ExFix.start_session_initiator("mysession", "SENDER", "TARGET", MyFixApplication,
   socket_connect_host: "localhost", socket_connect_port: 9876,
-  logon_username: "user1", logon_password: "pwd1", socket_use_ssl: true)
+  logon_username: "user1", logon_password: "pwd1", transport_mod: :ssl)
 # ...
 ExFix.send_message!("mysession", msg_fields)  ## See examples directory
 ```

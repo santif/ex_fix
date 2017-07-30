@@ -38,13 +38,10 @@ defmodule ExFixInitiator do
     def on_logout(fix_session_name) do
       Logger.info "[fix.event] [#{fix_session_name}] onLogout"
     end
-    
-
-
   end
 
   def start() do
     ExFix.start_session_initiator("simulator", "BUY", "SELL",
-      FixApplication, [dictionary: ExFix.DefaultDictionary])
+      FixApplication, dictionary: ExFix.DefaultDictionary, transport_mod: :ssl)
   end
 end
