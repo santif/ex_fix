@@ -45,6 +45,7 @@ defmodule ExFix.ExFixTest do
       reconnect_interval: 5, validate_incoming_message: true,
       time_service: nil, default_applverid: "9", logon_encrypt_method: "0",
       socket_connect_host: "host1", socket_connect_port: 0,
+      max_output_buf_count: 100, dictionary: ExFix.DefaultDictionary,
       transport_mod: TestTransport, transport_options: [test_pid: self()])
 
     assert_receive {:data, logon_msg}
