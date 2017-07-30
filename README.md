@@ -4,8 +4,8 @@
 [![Hex.pm Version](http://img.shields.io/hexpm/v/ex_fix.svg?style=flat)](https://hex.pm/packages/ex_fix)
 [![Coverage Status](https://coveralls.io/repos/github/santif/ex_fix/badge.svg?branch=master)](https://coveralls.io/github/santif/ex_fix?branch=master)
 
-FIX Session Protocol (FIXT.1.1) implementation in Elixir.
-Currently only supports FIX Initiator (buy side).
+Elixir implementation of FIX Session Protocol FIXT.1.1.
+Currently only supports FIX initiator (buy side).
 
 ## Installation
 
@@ -17,30 +17,44 @@ def deps do
 end
 ```
 
-## Two phase parse
+## Features
+
+- FIXT 1.1 session protocol implementation (session level)
+- Message validation: sequence number, length, checksum
+- Auto reconnection
+- SSL compatible
+- Session registry
+- Two-phase parse of FIX messages
+
+
+## Two-phase parse
 
 This library allows to parse the FIX message until certain tags are found. At that
 point it is possible to send the message to another process (example, a Book process,
-Account process, etc) to complete the parse and execute business logic.
+Account process, etc) to complete the parse and execute business logic specifically
+for the message's `subject`.
 
-As can be seen in the benchmarks below, two-phase parse allows to substantially
-decrease the time spent in the network client process.
+As can be seen in the benchmarks below, the two-phase parse substantially decreases
+the time spent in the network client process.
 
 ## To Do list
 
-This is a work in progress. Here is a list of some pending tasks, PRs are allowed.
+This is a work in progress. Here is a list of some pending tasks, PRs are welcome.
 
-- Dictionary based message validation/parse/serialization
-- Automatic generation of parser/validator/serializer from XML dictionary file
-- FIX Acceptor
+- Application level:
+  - Dictionary based message parse/validation/serialization
+  - Automatic generation of parser/validator/serializer from XML dictionary file
+  - Repeating groups
+- FIX acceptor
 - Multiple hosts configuration, for failover
-- Etc
+- Session scheduling (integration with 3rd party job management libraries)
+- etc.
 
 ## Benchmarks
 
-Elixir can't beat the performance of C/C++, but this library allows to avoid
+Elixir can't beat the performance of C/C++, but this library lets you avoid
 communication time between an external FIX initiator and the Erlang VM.
-In addition, there are fewer dependencies and number of failure points.
+In addition, there are fewer dependencies and number of possible failure points.
 
 - HW: Laptop Dell Latitude E5570 Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz 16 GB RAM
 - Parse benchmark: Execution Report with 155 bytes.
