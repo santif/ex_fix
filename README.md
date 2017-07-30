@@ -88,6 +88,7 @@ communication time between an external FIX initiator and the Erlang VM.
 In addition, there are fewer dependencies and number of possible failure points.
 
 - HW: Laptop Dell Latitude E5570 Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz 16 GB RAM
+- Elixir 1.4.5 / Erlang 19.2
 - Parser benchmark: Execution Report with 155 bytes.
 - Serializer benchmark: New Order Single with 115 bytes.
 
@@ -95,12 +96,12 @@ In addition, there are fewer dependencies and number of possible failure points.
 $ mix bench
 ...
 ## ExFixBench
-benchmark name                         iterations   average time
-Parse - Stage 1 (without validation)       500000   6.41 µs/op
-Parse - Stage 1                            500000   7.85 µs/op
-Serialize                                  100000   12.28 µs/op
-Parse - Full Msg (without validation)      100000   15.11 µs/op
-Parse - Full Msg                           100000   15.95 µs/op
+benchmark name                         iterations   average time 
+Parse - Stage 1 (without validation)       500000   6.26 µs/op
+Parse - Stage 1                            500000   7.64 µs/op
+Serialize                                  100000   11.75 µs/op
+Parse - Full Msg (without validation)      100000   14.42 µs/op
+Parse - Full Msg                           100000   16.23 µs/op
 ```
 
 ## Author
