@@ -23,8 +23,13 @@ defmodule ExFix.ExFixTest do
       Process.send(conn, {:data, data}, [])
     end
     def close(_conn), do: :ok
-    def receive(worker, data) do
-      Process.send(worker, {:tcp, self(), data}, [])
+    def receive(session_name, data, socket_protocol \\ :tcp) do
+      Process.send(:"ex_fix_session_#{session_name}",
+        {socket_protocol, self(), data}, [])
+    end
+    def disconnect(session_name, socket_protocol \\ :tcp) do
+      Process.send(:"ex_fix_session_#{session_name}",
+        {:"#{socket_protocol}_closed", self()}, [])
     end
   end
 
@@ -49,7 +54,7 @@ defmodule ExFix.ExFixTest do
       transport_mod: TestTransport, transport_options: [test_pid: self()])
 
     assert_receive {:data, logon_msg}
-    assert SessionRegistry.get_status() == %{"session1" => :connecting}
+    assert SessionRegistry.get_session_status("session1") == :connecting
     assert "8=FIXT.1.1" <> _ = logon_msg
 
     msg = Parser.parse(logon_msg, DefaultDictionary, 1)
@@ -63,9 +68,9 @@ defmodule ExFix.ExFixTest do
       {"1137", "9"}]}
     |> Serializer.serialize(now)
 
-    TestTransport.receive(:"ex_fix_session_session1", received_logon_msg)
-    Process.sleep(25)
-    assert SessionRegistry.get_status() == %{"session1" => :connected}
+    TestTransport.receive("session1", received_logon_msg)
+    Process.sleep(20)
+    assert SessionRegistry.get_session_status("session1") == :connected
 
     ## Send New Order Single
     now = DateTime.utc_now()
@@ -107,12 +112,65 @@ defmodule ExFix.ExFixTest do
       msg_type: "8", body: er_body}
     |> Serializer.serialize(now)
 
-    TestTransport.receive(:"ex_fix_session_session1", received_logon_msg)
+    TestTransport.receive("session1", received_logon_msg)
 
-    Process.sleep(25)
-    assert SessionRegistry.get_status() == %{"session1" => :connected}
+    Process.sleep(20)
+    assert SessionRegistry.get_session_status("session1") == :connected
 
     ExFix.stop_session("session1")
-    assert SessionRegistry.get_status() == %{}
+    assert SessionRegistry.get_session_status("session1") == :disconnected
+  end
+
+  test "Session - data received over TCP" do
+    ExFix.start_session_initiator("session2", "SENDER", "TARGET", TestApplication,
+      transport_mod: TestTransport, transport_options: [test_pid: self()])
+    assert_receive {:data, logon_msg}
+    assert SessionRegistry.get_session_status("session2") == :connecting
+    assert "8=FIXT.1.1" <> _ = logon_msg
+
+    msg = Parser.parse(logon_msg, DefaultDictionary, 1)
+    assert msg.valid
+
+    now = DateTime.utc_now()
+    received_logon_msg = %MessageToSend{seqnum: 1, sender: "TARGET",
+      orig_sending_time: now, target: "SENDER",
+      msg_type: "A", body: [{"98", "0"}, {"108", 120},
+      {"141", true}, {"553", "usr1"}, {"554", "pwd1"},
+      {"1137", "9"}]}
+    |> Serializer.serialize(now)
+    TestTransport.receive("session2", received_logon_msg, :tcp)
+
+    Process.sleep(20)
+    assert SessionRegistry.get_session_status("session2") == :connected
+  end
+
+  test "Session - disconnection" do
+    ExFix.start_session_initiator("session3", "SENDER", "TARGET", TestApplication,
+      transport_mod: TestTransport, transport_options: [test_pid: self()])
+    assert_receive {:data, logon_msg}
+    assert SessionRegistry.get_session_status("session3") == :connecting
+    assert "8=FIXT.1.1" <> _ = logon_msg
+
+    msg = Parser.parse(logon_msg, DefaultDictionary, 1)
+    assert msg.valid
+
+    now = DateTime.utc_now()
+    received_logon_msg = %MessageToSend{seqnum: 1, sender: "TARGET",
+      orig_sending_time: now, target: "SENDER",
+      msg_type: "A", body: [{"98", "0"}, {"108", 120},
+      {"141", true}, {"553", "usr1"}, {"554", "pwd1"},
+      {"1137", "9"}]}
+    |> Serializer.serialize(now)
+    TestTransport.receive("session3", received_logon_msg, :ssl)
+
+    Process.sleep(20)
+    assert SessionRegistry.get_session_status("session3") == :connected
+
+    TestTransport.disconnect("session3", :ssl)
+    Process.sleep(20)
+    assert SessionRegistry.get_session_status("session3") == :reconnecting
+
+    # ExFix.stop_session("session3")
+    # assert SessionRegistry.get_session_status("session3") == :disconnected
   end
 end

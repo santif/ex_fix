@@ -28,6 +28,13 @@ defmodule ExFix.SessionRegistry do
     |> Enum.into(%{})
   end
 
+  def get_session_status(session_name) do
+    case :ets.lookup(@ets_table, session_name) do
+      [{^session_name, status}] -> status
+      [] -> :disconnected
+    end
+  end
+
   def start_session(fix_session_name, config) do
     :ets.insert(@ets_table, {fix_session_name, :connecting})
     Supervisor.start_child(ExFix.SessionSup, [config])
