@@ -34,14 +34,7 @@ defmodule ExFix.DateUtil do
 
   defp pad2(num), do: if num < 10, do: "0#{num}", else: "#{num}"
 
-  defp pad3(num) do
-    cond do
-      num < 10 ->
-        "00#{num}"
-      num < 100 ->
-        "0#{num}"
-      true ->
-        "#{num}"
-    end
-  end
+  defp pad3(num) when num < 10, do: "00#{num}"
+  defp pad3(num) when num < 100, do: "0#{num}"
+  defp pad3(num), do: "#{num}"
 end
