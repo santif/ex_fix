@@ -5,7 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/santif/ex_fix/badge.svg?branch=master)](https://coveralls.io/github/santif/ex_fix?branch=master)
 
 Elixir implementation of FIX Session Protocol FIXT.1.1.
-Currently only supports FIX initiator (buy side).
+Currently only supports FIX session initiator (buy side).
 
 ## Installation
 
@@ -76,7 +76,7 @@ This is a work in progress. Here is a list of some pending tasks, PRs are welcom
   - Dictionary based message parse/validation/serialization
   - Automatic generation of parser/validator/serializer from XML dictionary file
   - Repeating groups
-- FIX acceptor
+- FIX session acceptor
 - Multiple hosts configuration, for failover
 - Session scheduling (integration with 3rd party job management libraries)
 - etc.
