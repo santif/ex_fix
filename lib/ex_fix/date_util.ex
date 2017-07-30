@@ -7,7 +7,7 @@ defmodule ExFix.DateUtil do
 
   def serialize_date(%DateTime{calendar: Calendar.ISO, day: day, hour: hour,
       microsecond: {micro, _}, minute: minute, month: month, second: second, std_offset: 0,
-      time_zone: "Etc/UTC", utc_offset: 0, year: year, zone_abbr: "UTC"}) do
+      time_zone: "Etc/UTC", utc_offset: 0, year: year}) do
     year_bin = "#{year}"
     month_bin = pad2(month)
     day_bin = pad2(day)
