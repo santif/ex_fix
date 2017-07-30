@@ -22,8 +22,7 @@ defmodule ExFix.Mixfile do
 
   defp description do
     """
-    FIX Session Protocol FIXT.1.1 implementation in Elixir.
-    Currently only supports FIX Initiator (buy side).
+    FIX Session Protocol FIXT.1.1 implementation in Elixir
     """
   end
 
