@@ -1,0 +1,29 @@
+apply plugin: 'java'
+
+ext {
+    MINA_SSL_VERSION = '1.1.7'
+    MINA_CORE_VERSION = '2.0.13'
+    QUICKFIXJ_VERSION = '1.6.3'
+    SL4FJ_API_VERSION = '1.7.24'
+    LOGBACK_VERSION = '1.2.3'
+}
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile "ch.qos.logback:logback-core:${LOGBACK_VERSION}"
+    compile "ch.qos.logback:logback-classic:${LOGBACK_VERSION}"
+    compile "org.slf4j:slf4j-api:${SL4FJ_API_VERSION}"
+    compile "org.quickfixj:quickfixj-all:${QUICKFIXJ_VERSION}"
+    compile "org.apache.mina:mina-core:${MINA_CORE_VERSION}"
+    compile "org.apache.mina:mina-filter-ssl:${MINA_SSL_VERSION}"
+}
+
+jar {
+    manifest {
+        attributes("Main-Class": "exfix.Main")
+    }
+    from configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+}
