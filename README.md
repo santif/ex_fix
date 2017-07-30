@@ -17,6 +17,37 @@ def deps do
 end
 ```
 
+## Usage
+
+```elixir
+defmodule MyFixApplication do
+  @behaviour ExFix.FixApplication
+  alias ExFix.Types.Message
+
+  def before_logon(_fix_session_name, _fields), do: :ok
+
+  def on_logon(fix_session_name, pid) do
+    # Logon OK
+    ...
+  end
+
+  def on_message(fix_session_name, msg_type, pid, %Message{} = msg) do
+    # Message received from FIX counterparty
+    ...
+  end
+
+  def on_logout(fix_session_name) do
+    ...
+  end
+end
+
+ExFix.start_session_initiator("mysession", "SENDER", "TARGET", MyFixApplication,
+  socket_connect_host: "localhost", socket_connect_port: 9876,
+  logon_username: "user1", logon_password: "pwd1", socket_use_ssl: true)
+...
+ExFix.send_message!("mysession", msg_fields)  ## See examples directory
+```
+
 ## Features
 
 - FIXT.1.1 session protocol implementation (session level messages)
