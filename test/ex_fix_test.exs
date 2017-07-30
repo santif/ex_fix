@@ -5,6 +5,16 @@ defmodule ExFix.ExFixTest do
   alias ExFix.DefaultDictionary
   alias ExFix.Types.MessageToSend
 
+  @tag_account       "1"
+  @tag_cl_ord_id     "11"
+  @tag_order_qty     "38"
+  @tag_ord_type      "40"
+  @tag_price         "44"
+  @tag_side          "54"
+  @tag_symbol        "55"
+  @tag_time_in_force "59"
+  @tag_transact_time "60"
+
   defmodule TestTransport do
     def connect(_host, _port, options) do
       {:ok, options[:test_pid]}
@@ -49,6 +59,24 @@ defmodule ExFix.ExFixTest do
     TestTransport.receive(:"ex_fix_session_session1", received_logon_msg)
     Process.sleep(50)
     assert SessionRegistry.get_status() == %{"session1" => :connected}
+
+    ## Send New Order Single
+    now = DateTime.utc_now()
+    body = [
+      {@tag_account, 1234},
+      {@tag_cl_ord_id, "cod12345"},
+      {@tag_order_qty, 10},
+      {@tag_ord_type, "2"},
+      {@tag_price, 1.23},
+      {@tag_side, "1"},
+      {@tag_symbol, "SYM1"},
+      {@tag_time_in_force, "0"},
+      {@tag_transact_time, now},
+    ]
+    ExFix.send_message!("session1", "D", body)
+
+    assert_receive {:data, new_order_single}
+    assert "8=FIXT.1.1" <> _ = new_order_single
 
     SessionRegistry.stop_session("session1")
     assert SessionRegistry.get_status() == %{}
