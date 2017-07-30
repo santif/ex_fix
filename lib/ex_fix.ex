@@ -7,20 +7,19 @@ defmodule ExFix do
   alias ExFix.Types.SessionConfig
   alias ExFix.Types, as: T
 
-  @default_fix_application Application.get_env(:ex_fix, :default_fix_application)
   @default_dictionary Application.get_env(:ex_fix, :default_dictionary)
 
   @doc """
   Starts FIX session initiator
   """
   def start_session_initiator(session_name, sender_comp_id, target_comp_id,
-      fix_application \\ nil, opts \\ []) do
+      fix_application, opts \\ []) do
     config = %SessionConfig{
       name: session_name,
       mode: :initiator,
       sender_comp_id: sender_comp_id,
       target_comp_id: target_comp_id,
-      fix_application: fix_application || @default_fix_application,
+      fix_application: fix_application,
       dictionary: opts[:dictionary] || @default_dictionary,
       socket_connect_host: opts[:socket_connect_host] || "localhost",
       socket_connect_port: opts[:socket_connect_port] || 9876,

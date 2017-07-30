@@ -190,7 +190,7 @@ defmodule ExFix.SessionWorker do
     end
     case result do
       {:ok, client} ->
-        tx_timer = SessionTimer.setup_timer(:tx, session.config.heart_bt_int)
+        tx_timer = SessionTimer.setup_timer(:tx, session.config.heart_bt_int * 1_000)
         do_send_messages(transport, client, msgs_to_send, fix_session_name,
           log_outgoing_msg, tx_timer)
         {:noreply, %State{state | transport: transport, client: client,
@@ -202,7 +202,7 @@ defmodule ExFix.SessionWorker do
   end
 
   defp setup_rx_timer(%Session{config: %SessionConfig{name: name, heart_bt_int: heart_bt_int}}) do
-    interval = round(heart_bt_int * @rx_heartbeat_tolerance)
+    interval = round(heart_bt_int * 1_000 * @rx_heartbeat_tolerance)
     rx_timer = SessionTimer.setup_timer(:rx, interval)
     SessionRegistry.session_update_status(name, :connected)
     rx_timer
