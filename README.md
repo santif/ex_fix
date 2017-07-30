@@ -22,30 +22,29 @@ end
 ```elixir
 defmodule MyFixApplication do
   @behaviour ExFix.FixApplication
-  alias ExFix.Types.Message
+  require Logger
 
-  def before_logon(_fix_session_name, _fields), do: :ok
+  alias ExFix.Types.Message
+  alias ExFix.Parser
+
+  @msg_new_order_single "D"
 
   def on_logon(fix_session_name, session_pid) do
-    # Logon OK
-    # ...
+    fields = []  # See examples directory
+    ExFix.send_message!(session_pid, @msg_new_order_single, fields)
   end
 
   def on_message(fix_session_name, msg_type, session_pid, %Message{} = msg) do
-    # Message received from FIX counterparty
-    # ...
+    Logger.info "Msg received: #{inspect Parser.parse2(msg)}"
   end
 
-  def on_logout(fix_session_name) do
-    # ...
-  end
+  def before_logon(_fix_session_name, _fields), do: :ok
+  def on_logout(_fix_session_name), do: :ok
 end
 
 ExFix.start_session_initiator("mysession", "SENDER", "TARGET", MyFixApplication,
   socket_connect_host: "localhost", socket_connect_port: 9876,
   logon_username: "user1", logon_password: "pwd1", transport_mod: :ssl)
-# ...
-ExFix.send_message!("mysession", msg_fields)  ## See examples directory
 ```
 
 ## Features
