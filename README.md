@@ -26,12 +26,12 @@ defmodule MyFixApplication do
 
   def before_logon(_fix_session_name, _fields), do: :ok
 
-  def on_logon(fix_session_name, pid) do
+  def on_logon(fix_session_name, session_pid) do
     # Logon OK
     # ...
   end
 
-  def on_message(fix_session_name, msg_type, pid, %Message{} = msg) do
+  def on_message(fix_session_name, msg_type, session_pid, %Message{} = msg) do
     # Message received from FIX counterparty
     # ...
   end
@@ -88,8 +88,8 @@ communication time between an external FIX initiator and the Erlang VM.
 In addition, there are fewer dependencies and number of possible failure points.
 
 - HW: Laptop Dell Latitude E5570 Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz 16 GB RAM
-- Parse benchmark: Execution Report with 155 bytes.
-- Serialize benchmark: New Order Single with 115 bytes.
+- Parser benchmark: Execution Report with 155 bytes.
+- Serializer benchmark: New Order Single with 115 bytes.
 
 ```
 $ mix bench
