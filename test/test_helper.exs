@@ -18,6 +18,34 @@ defmodule ExFix.TestHelper do
     end
   end
 
+  defmodule FixEmptyApplication do
+    @behaviour ExFix.FixApplication
+    def before_logon(_fix_session, _fields), do: :ok
+    def on_logon(_fix_session, _pid) do
+    end
+    def on_message(_fix_session, _msg_type, _pid, _msg) do
+    end
+    def on_logout(_fix_session), do: :ok
+  end
+
+  defmodule TestTransport do
+    def connect(_host, _port, options) do
+      {:ok, options[:test_pid]}
+    end
+    def send(conn, data) do
+      Process.send(conn, {:data, data}, [])
+    end
+    def close(_conn), do: :ok
+    def receive(session_name, data, socket_protocol \\ :tcp) do
+      Process.send(:"ex_fix_session_#{session_name}",
+        {socket_protocol, self(), data}, [])
+    end
+    def disconnect(session_name, socket_protocol \\ :tcp) do
+      Process.send(:"ex_fix_session_#{session_name}",
+        {:"#{socket_protocol}_closed", self()}, [])
+    end
+  end
+
   @doc """
   Helper function to construct a FIX message from UTF-8 string
   """

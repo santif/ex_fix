@@ -22,12 +22,6 @@ defmodule ExFix.SessionRegistry do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  def get_status() do
-    @ets_table
-    |> :ets.tab2list()
-    |> Enum.into(%{})
-  end
-
   def get_session_status(session_name) do
     case :ets.lookup(@ets_table, session_name) do
       [{^session_name, status}] -> status

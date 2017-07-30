@@ -1,9 +1,12 @@
 defmodule ExFix.ExFixTest do
   use ExUnit.Case
+  import ExFix.TestHelper
+
   alias ExFix.SessionRegistry
   alias ExFix.{Parser, Serializer}
   alias ExFix.DefaultDictionary
   alias ExFix.Types.MessageToSend
+  alias ExFix.TestHelper.{FixEmptyApplication, TestTransport}
 
   @tag_account       "1"
   @tag_cl_ord_id     "11"
@@ -15,42 +18,15 @@ defmodule ExFix.ExFixTest do
   @tag_time_in_force "59"
   @tag_transact_time "60"
 
-  defmodule TestTransport do
-    def connect(_host, _port, options) do
-      {:ok, options[:test_pid]}
-    end
-    def send(conn, data) do
-      Process.send(conn, {:data, data}, [])
-    end
-    def close(_conn), do: :ok
-    def receive(session_name, data, socket_protocol \\ :tcp) do
-      Process.send(:"ex_fix_session_#{session_name}",
-        {socket_protocol, self(), data}, [])
-    end
-    def disconnect(session_name, socket_protocol \\ :tcp) do
-      Process.send(:"ex_fix_session_#{session_name}",
-        {:"#{socket_protocol}_closed", self()}, [])
-    end
-  end
-
-  defmodule TestApplication do
-    @behaviour ExFix.FixApplication
-    def before_logon(_fix_session, _fields), do: :ok
-    def on_logon(_fix_session, _pid) do
-    end
-    def on_message(_fix_session, _msg_type, _pid, _msg) do
-    end
-    def on_logout(_fix_session), do: :ok
-  end
-
   test "Session initiator simple test" do
-    ExFix.start_session_initiator("session1", "SENDER", "TARGET", TestApplication,
+    ExFix.start_session_initiator("session1", "SENDER", "TARGET", FixEmptyApplication,
       logon_username: "usr1", logon_password: "pwd1", log_incoming_msg: true,
       log_outgoing_msg: true, reset_on_logon: true, heart_bt_int: 10,
       reconnect_interval: 5, validate_incoming_message: true,
       time_service: nil, default_applverid: "9", logon_encrypt_method: "0",
       socket_connect_host: "host1", socket_connect_port: 0,
       max_output_buf_count: 100, dictionary: ExFix.DefaultDictionary,
+      time_service: nil,
       transport_mod: TestTransport, transport_options: [test_pid: self()])
 
     assert_receive {:data, logon_msg}
@@ -122,7 +98,7 @@ defmodule ExFix.ExFixTest do
   end
 
   test "Session - data received over TCP" do
-    ExFix.start_session_initiator("session2", "SENDER", "TARGET", TestApplication,
+    ExFix.start_session_initiator("session2", "SENDER", "TARGET", FixEmptyApplication,
       transport_mod: TestTransport, transport_options: [test_pid: self()])
     assert_receive {:data, logon_msg}
     assert SessionRegistry.get_session_status("session2") == :connecting
@@ -145,7 +121,7 @@ defmodule ExFix.ExFixTest do
   end
 
   test "Session - disconnection" do
-    ExFix.start_session_initiator("session3", "SENDER", "TARGET", TestApplication,
+    ExFix.start_session_initiator("session3", "SENDER", "TARGET", FixEmptyApplication,
       transport_mod: TestTransport, transport_options: [test_pid: self()])
     assert_receive {:data, logon_msg}
     assert SessionRegistry.get_session_status("session3") == :connecting
@@ -171,6 +147,7 @@ defmodule ExFix.ExFixTest do
     assert SessionRegistry.get_session_status("session3") == :reconnecting
 
     # ExFix.stop_session("session3")
+    # Process.sleep(20)
     # assert SessionRegistry.get_session_status("session3") == :disconnected
   end
 end

@@ -1,12 +1,11 @@
 defmodule ExFix.SessionTest do
   use ExUnit.Case
+  import ExFix.TestHelper
 
   alias ExFix.Types.MessageToSend
   alias ExFix.Types.SessionConfig
   alias ExFix.Session
   alias ExFix.TestHelper.FixDummyApplication
-
-  import ExFix.TestHelper
 
   @msg_type_logon             "A"
   @msg_type_heartbeat         "0"
