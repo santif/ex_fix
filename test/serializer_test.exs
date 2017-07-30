@@ -95,4 +95,43 @@ defmodule ExFix.SerializerTest do
 
     assert bin_message == expected_message
   end
+
+  test "serialize_date - 1" do
+    now = %DateTime{year: 2017, month: 5, day: 6, zone_abbr: "ART",
+      hour: 11, minute: 12, second: 13, microsecond: {1_000, 3},
+      utc_offset: -10_800, std_offset: 0,
+      time_zone: "America/Argentina/Buenos_Aires"}
+    msg = %MessageToSend{seqnum: 1, sender: "SENDER", orig_sending_time: now,
+      target: "TARGET", msg_type: "0", body: []}
+    |> Serializer.serialize(now)
+    |> :binary.replace(<<1>>, "|", [:global])
+
+    assert msg =~ ~r/20170506-14:12:13\.001/
+  end
+
+  test "serialize_date - 2" do
+    now = %DateTime{year: 2017, month: 5, day: 6, zone_abbr: "ART",
+      hour: 11, minute: 12, second: 13, microsecond: {12_000, 3},
+      utc_offset: -10_800, std_offset: 0,
+      time_zone: "America/Argentina/Buenos_Aires"}
+    msg = %MessageToSend{seqnum: 1, sender: "SENDER", orig_sending_time: now,
+      target: "TARGET", msg_type: "0", body: []}
+    |> Serializer.serialize(now)
+    |> :binary.replace(<<1>>, "|", [:global])
+
+    assert msg =~ ~r/20170506-14:12:13\.012/
+  end
+
+  test "serialize_date - 3" do
+    now = %DateTime{year: 2017, month: 5, day: 6, zone_abbr: "ART",
+      hour: 11, minute: 12, second: 13, microsecond: {123_000, 3},
+      utc_offset: -10_800, std_offset: 0,
+      time_zone: "America/Argentina/Buenos_Aires"}
+    msg = %MessageToSend{seqnum: 1, sender: "SENDER", orig_sending_time: now,
+      target: "TARGET", msg_type: "0", body: []}
+    |> Serializer.serialize(now)
+    |> :binary.replace(<<1>>, "|", [:global])
+
+    assert msg =~ ~r/20170506-14:12:13\.123/
+  end
 end
