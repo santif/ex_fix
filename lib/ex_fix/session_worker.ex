@@ -121,10 +121,7 @@ defmodule ExFix.SessionWorker do
     SessionRegistry.session_update_status(fix_session_name, :reconnecting)
     :ok
   end
-  def terminate(reason, _state) do
-    Logger.warn "terminate: #{inspect reason}"
-    :ok
-  end
+  def terminate(_reason, _state), do: :ok
 
   ##
   ## Private functions
