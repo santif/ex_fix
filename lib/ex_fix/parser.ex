@@ -70,7 +70,6 @@ defmodule ExFix.Parser do
     msg
   end
 
-
   ##
   ## Private functions
   ##
