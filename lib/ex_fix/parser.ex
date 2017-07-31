@@ -93,22 +93,13 @@ defmodule ExFix.Parser do
               original_fix_msg: orig_msg, other_msgs: other_msgs}
 
           false ->
-            case (msg_seqnum < expected_seqnum and expected_seqnum != nil) do
-              true ->
-                {:ok, sub, fields, rest0} = do_parse(msg, dictionary.subject(msg_type),
-                  [{"34", str_seqnum}, {"35", msg_type}])
-                error_reason = :unexpected_seqnum
-                %Message{valid: false, msg_type: msg_type, seqnum: msg_seqnum,
-                  subject: sub, fields: fields, rest_msg: rest0,
-                  other_msgs: other_msgs, original_fix_msg: orig_msg,
-                  error_reason: error_reason}
-
-              false ->
-                error_reason = :unexpected_seqnum
-                %Message{valid: false, msg_type: msg_type, seqnum: msg_seqnum,
-                  other_msgs: other_msgs, original_fix_msg: orig_msg,
-                  error_reason: error_reason}
-            end
+            {:ok, sub, fields, rest0} = do_parse(msg, dictionary.subject(msg_type),
+              [{"34", str_seqnum}, {"35", msg_type}])
+            error_reason = :unexpected_seqnum
+            %Message{valid: false, msg_type: msg_type, seqnum: msg_seqnum,
+              subject: sub, fields: fields, rest_msg: rest0,
+              other_msgs: other_msgs, original_fix_msg: orig_msg,
+              error_reason: error_reason}
         end
 
       _ ->

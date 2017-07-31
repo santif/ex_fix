@@ -221,34 +221,11 @@ defmodule ExFix.Session do
   end
 
   def process_incoming_message(expected_seqnum, @msg_type_sequence_reset, _session_name,
-      %Session{config: config, out_lastseq: out_lastseq, in_lastseq: in_lastseq} = session,
-      %Message{seqnum: seqnum, fields: fields}) do
+      session, %Message{seqnum: seqnum, fields: fields}) do
     gap_fill = :lists.keyfind(@field_gap_fill_flag, 1, fields) == {@field_gap_fill_flag, "Y"}
     {@field_new_seq_no, new_seq_no_str} = :lists.keyfind(@field_new_seq_no, 1, fields)
     {new_seq_no, _} = Integer.parse(new_seq_no_str)
-    cond do
-      gap_fill and new_seq_no > seqnum and expected_seqnum == seqnum ->
-        {:ok, [], %Session{session | in_lastseq: new_seq_no}}
-      gap_fill and new_seq_no <= seqnum and expected_seqnum == seqnum ->
-        out_lastseq = out_lastseq + 1
-        reject_msg = build_message(config, @msg_type_reject, out_lastseq,
-          [{@field_text,
-           "Attempt to lower sequence number, invalid value NewSeqNum=#{new_seq_no}"}])
-        {:ok, [reject_msg], %Session{session | in_lastseq: new_seq_no}}
-      not gap_fill and new_seq_no > seqnum and expected_seqnum < new_seq_no ->
-        {:ok, [], %Session{session | in_lastseq: new_seq_no - 1}}
-      not gap_fill and new_seq_no == seqnum and expected_seqnum == new_seq_no ->
-        ## TODO warning
-        {:ok, [], %Session{session | in_lastseq: new_seq_no - 1}}
-      not gap_fill and new_seq_no < seqnum and expected_seqnum > new_seq_no ->
-        out_lastseq = out_lastseq + 1
-        reject_msg = build_message(config, @msg_type_reject, out_lastseq,
-          [{@field_session_reject_reason, "5"},
-            {@field_text, "Value is incorrect (out of range) for this tag"}])
-        {:ok, [reject_msg], %Session{session | in_lastseq: in_lastseq}}
-      true ->
-        {:ok, [], %Session{session | in_lastseq: seqnum}}
-    end
+    process_sequence_reset(gap_fill, new_seq_no, seqnum, expected_seqnum, session)
   end
 
   def process_incoming_message(_expected_seqnum, @msg_type_logout, _session_name,
@@ -429,5 +406,40 @@ defmodule ExFix.Session do
     |> :ets.tab2list()
     |> Enum.filter(filter)
     |> Enum.map(mapper)
+  end
+
+  defp process_sequence_reset(true = _gap_fill, new_seq_no, seqnum, expected_seqnum, session)
+      when new_seq_no > seqnum and expected_seqnum == seqnum do
+    {:ok, [], %Session{session | in_lastseq: new_seq_no}}
+  end
+  defp process_sequence_reset(true = _gap_fill, new_seq_no, seqnum, expected_seqnum,
+      %Session{config: config, out_lastseq: out_lastseq} = session)
+      when new_seq_no <= seqnum and expected_seqnum == seqnum do
+    out_lastseq = out_lastseq + 1
+    reject_msg = build_message(config, @msg_type_reject, out_lastseq,
+      [{@field_text,
+        "Attempt to lower sequence number, invalid value NewSeqNum=#{new_seq_no}"}])
+    {:ok, [reject_msg], %Session{session | in_lastseq: new_seq_no}}
+  end
+  defp process_sequence_reset(false = _gap_fill, new_seq_no, seqnum, expected_seqnum, session)
+      when new_seq_no > seqnum and expected_seqnum < new_seq_no do
+    {:ok, [], %Session{session | in_lastseq: new_seq_no - 1}}
+  end
+  defp process_sequence_reset(false = _gap_fill, new_seq_no, seqnum, expected_seqnum, session)
+      when new_seq_no == seqnum and expected_seqnum == new_seq_no do
+    ## TODO warning
+    {:ok, [], %Session{session | in_lastseq: new_seq_no - 1}}
+  end
+  defp process_sequence_reset(false = _gap_fill, new_seq_no, seqnum, expected_seqnum,
+      %Session{config: config, out_lastseq: out_lastseq, in_lastseq: in_lastseq} = session)
+      when new_seq_no < seqnum and expected_seqnum > new_seq_no do
+    out_lastseq = out_lastseq + 1
+    reject_msg = build_message(config, @msg_type_reject, out_lastseq,
+      [{@field_session_reject_reason, "5"},
+        {@field_text, "Value is incorrect (out of range) for this tag"}])
+    {:ok, [reject_msg], %Session{session | in_lastseq: in_lastseq}}
+  end
+  defp process_sequence_reset(_gap_fill, _new_seq_no, seqnum, _expected_seqnum, session) do
+    {:ok, [], %Session{session | in_lastseq: seqnum}}
   end
 end

@@ -27,7 +27,6 @@ defmodule ExFix.DateUtil do
     << yyyy::binary(), mm::binary(), dd::binary(), "-", time::binary()>>
   end
 
-
   ##
   ## Private functions
   ##

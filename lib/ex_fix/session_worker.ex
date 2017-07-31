@@ -11,7 +11,7 @@ defmodule ExFix.SessionWorker do
   alias ExFix.Serializer
   alias ExFix.SessionTimer
 
-  @compile {:inline, handle_data: 5}
+  @compile {:inline, handle_data: 2}
 
   @rx_heartbeat_tolerance 1.2  # Heartbeat interval + 20%
 
@@ -58,23 +58,18 @@ defmodule ExFix.SessionWorker do
       log_outgoing_msg: config.log_outgoing_msg}}
   end
 
-  def handle_info({:timeout, timer_name}, %State{name: fix_session_name,
-      transport: transport, client: client, session: session,
-      log_outgoing_msg: log_outgoing_msg, tx_timer: tx_timer} = state) do
+  def handle_info({:timeout, timer_name}, %State{session: session} = state) do
     {:ok, msgs_to_send, session} = Session.handle_timeout(session, timer_name)
-    do_send_messages(transport, client, msgs_to_send, fix_session_name,
-      log_outgoing_msg, tx_timer)
+    do_send_messages(msgs_to_send, state)
     {:noreply, %State{state | session: session}}
   end
 
-  def handle_info({:ssl, _socket, data}, %State{transport: transport, client: client,
-      session: session} = state) do
-    handle_data(data, transport, client, session, state)
+  def handle_info({:ssl, _socket, data}, %State{} = state) do
+    handle_data(data, state)
   end
 
-  def handle_info({:tcp, _socket, data}, %State{transport: transport, client: client,
-      session: session} = state) do
-    handle_data(data, transport, client, session, state)
+  def handle_info({:tcp, _socket, data}, %State{} = state) do
+    handle_data(data, state)
   end
 
   def handle_info({:init, action, config}, state) do
@@ -98,10 +93,9 @@ defmodule ExFix.SessionWorker do
     {:stop, :closed, state}
   end
 
-  def handle_call({:send_message, msg_type, fields}, _from, %State{name: name, transport: transport,
-      client: client, session: session, log_outgoing_msg: log_outgoing_msg, tx_timer: tx_timer} = state) do
+  def handle_call({:send_message, msg_type, fields}, _from, %State{session: session} = state) do
     {:ok, msgs, session} = Session.send_message(session, msg_type, fields)
-    do_send_messages(transport, client, msgs, name, log_outgoing_msg, tx_timer)
+    do_send_messages(msgs, state)
     {:reply, :ok, %State{state | session: session}}
   end
 
@@ -129,8 +123,7 @@ defmodule ExFix.SessionWorker do
   ## Private functions
   ##
 
-  defp handle_data(data, transport, client, session, %State{name: name,
-      rx_timer: rx_timer} = state) do
+  defp handle_data(data, %State{session: session, rx_timer: rx_timer} = state) do
     case Session.handle_incoming_data(session, data) do
       {:ok, [], session2} ->
         rx_timer = case rx_timer do
@@ -141,29 +134,27 @@ defmodule ExFix.SessionWorker do
         {:noreply, %State{state | session: session2, rx_timer: rx_timer}}
       {:ok, msgs_to_send, session2} ->
         send(rx_timer, :msg)
-        do_send_messages(transport, client, msgs_to_send, name,
-          state.log_outgoing_msg, state.tx_timer)
+        do_send_messages(msgs_to_send, state)
         {:noreply, %State{state | session: session2}}
       {:resend, msgs_to_send, session2} ->
         send(rx_timer, :msg)
-        do_send_messages(transport, client, msgs_to_send, name,
-          state.log_outgoing_msg, state.tx_timer, true)
+        do_send_messages(msgs_to_send, state, true)
         {:noreply, %State{state | session: session2}}
       {:logout, msgs_to_send, session2} ->
         send(rx_timer, :msg)
         ## TODO start logout process
-        do_send_messages(transport, client, msgs_to_send, state.name,
-          state.log_outgoing_msg, state.tx_timer)
+        do_send_messages(msgs_to_send, state)
         {:noreply, %State{state | session: session2}}
     end
   end
 
-  defp do_send_messages(transport, client, msgs_to_send, fix_session, log, tx_timer,
-      resend \\ false) do
+  defp do_send_messages(msgs_to_send, %State{name: fix_session_name,
+      transport: transport, client: client, log_outgoing_msg: log_outgoing_msg,
+      tx_timer: tx_timer}, resend \\ false) do
     for msg <- msgs_to_send do
       data = Serializer.serialize(msg, DateTime.utc_now(), resend)
-      if log do
-        Logger.info "[fix.outgoing] [#{fix_session}] " <>
+      if log_outgoing_msg do
+        Logger.info "[fix.outgoing] [#{fix_session_name}] " <>
           :unicode.characters_to_binary(data, :latin1, :utf8)
       end
       transport.send(client, data)
@@ -173,8 +164,7 @@ defmodule ExFix.SessionWorker do
     :ok
   end
 
-  defp connect_and_send_logon(config, %State{name: fix_session_name,
-      log_outgoing_msg: log_outgoing_msg} = state) do
+  defp connect_and_send_logon(config, %State{name: fix_session_name} = state) do
     Logger.debug fn -> "Starting FIX session: [#{fix_session_name}]" end
     {:ok, session} = Session.init(config)
     {:ok, msgs_to_send, session} = Session.session_start(session)
@@ -187,10 +177,10 @@ defmodule ExFix.SessionWorker do
     case config.transport_mod.connect(str_host, port, options) do
       {:ok, client} ->
         tx_timer = SessionTimer.setup_timer(:tx, session.config.heart_bt_int * 1_000)
-        do_send_messages(config.transport_mod, client, msgs_to_send, fix_session_name,
-          log_outgoing_msg, tx_timer)
-        {:noreply, %State{state | transport: config.transport_mod, client: client,
-          session: session, tx_timer: tx_timer}}
+        state = %State{state | transport: config.transport_mod, client: client,
+          session: session, tx_timer: tx_timer}
+        do_send_messages(msgs_to_send, state)
+        {:noreply, state}
       {:error, reason} ->
         Logger.error "Cannot open socket: #{inspect reason}"
         {:stop, reason, state}

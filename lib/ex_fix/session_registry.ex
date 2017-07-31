@@ -10,6 +10,7 @@ defmodule ExFix.SessionRegistry do
   @ets_table :"ex_fix_registry"
 
   defmodule State do
+    @moduledoc false
     defstruct monitor_map: %{}
   end
 

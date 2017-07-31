@@ -8,7 +8,7 @@ defmodule ExFixBench do
   @dictionary ExFix.DefaultDictionary
 
   bench "Serialize", [now: get_sending_time()] do
-    %MessageToSend{seqnum: 10, sender: "SENDER",
+    msg = %MessageToSend{seqnum: 10, sender: "SENDER",
       orig_sending_time: now, target: "TARGET", msg_type: "D", body: [
         {"1", 531},       # Account
         {"11", "99"},     # ClOrdID
@@ -17,7 +17,7 @@ defmodule ExFixBench do
         {"54", "1"},      # Side
         {"55", "ABC"},    # Symbol
       ]}
-    |> Serializer.serialize(now)
+    Serializer.serialize(msg, now)
   end
 
   bench "Parse - Stage 1", [data: get_data()] do
@@ -35,7 +35,6 @@ defmodule ExFixBench do
   bench "Parse - Full Msg (without validation)", [data: get_data()] do
     Parser.parse(data, @dictionary, nil, false)
   end
-
 
   ##
   ## Private functions
