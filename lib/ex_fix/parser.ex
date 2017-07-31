@@ -42,9 +42,8 @@ defmodule ExFix.Parser do
         end
 
       _ ->
-        ## TODO fix orig_msg value and other_msgs value
         orig_msg = << "8=FIXT.1.1", @soh, "9=", rest::binary() >>
-        %Message{valid: false, msg_type: nil, seqnum: nil, other_msgs: "",
+        %Message{valid: false, msg_type: nil, seqnum: nil, other_msgs: orig_msg,
           original_fix_msg: orig_msg, error_reason: :garbled}
     end
   end
