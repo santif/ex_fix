@@ -146,6 +146,9 @@ defmodule ExFix.Session do
     {:logout_and_wait, [logout_msg],
       %Session{session | status: :disconnecting, out_lastseq: out_lastseq}}
   end
+  def session_stop(%Session{} = session) do
+    {:stop, %Session{session | status: :disconnected}}
+  end
 
   @doc """
   Send application message

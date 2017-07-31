@@ -13,7 +13,8 @@ defmodule ExFix.SessionWorker do
 
   @compile {:inline, handle_data: 2}
 
-  @rx_heartbeat_tolerance 1.2  # Heartbeat interval + 20%
+  @rx_heartbeat_tolerance Application.get_env(:ex_fix, :rx_heartbeat_tolerance, 1.2)
+  @logout_timeout Application.get_env(:ex_fix, :logout_timeout, 2_000)
 
   defmodule State do
     @moduledoc false
@@ -42,7 +43,7 @@ defmodule ExFix.SessionWorker do
   def stop(fix_session) do
     # name = {:via, ExFix.Registry, {:ex_fix_session, fix_session}}
     name = :"ex_fix_session_#{fix_session}"
-    GenServer.call(name, :stop)
+    GenServer.cast(name, :stop)
   end
 
   ##
@@ -98,10 +99,18 @@ defmodule ExFix.SessionWorker do
     {:reply, :ok, %State{state | session: session}}
   end
 
-  def handle_call(:stop, _from, %State{transport: transport, client: client} = state) do
-    # TODO logout
+  def handle_cast(:stop, %State{transport: transport, client: client,
+      session: session} = state) do
+    state = case Session.session_stop(session) do
+      {:logout_and_wait, msgs_to_send, session} ->
+        do_send_messages(msgs_to_send, state)
+        Process.sleep(@logout_timeout)
+        %State{state | session: session}
+      {:stop, session} ->
+        %State{state | session: session}
+    end
     transport.close(client)
-    {:reply, :ok, state}
+    {:stop, :normal, state}
   end
 
   def terminate(:econnrefused, %State{name: fix_session_name} = _state) do
@@ -140,9 +149,11 @@ defmodule ExFix.SessionWorker do
         {:noreply, %State{state | session: session2}}
       {:logout, msgs_to_send, session2} ->
         send(rx_timer, :msg)
-        ## TODO start logout process
         do_send_messages(msgs_to_send, state)
-        {:noreply, %State{state | session: session2}}
+        Process.sleep(@logout_timeout)
+        %State{transport: transport, client: client} = state
+        transport.close(client)
+        {:stop, :normal, %State{state | session: session2}}
     end
   end
 
@@ -157,7 +168,6 @@ defmodule ExFix.SessionWorker do
       end
       transport.send(client, data)
       send(tx_timer, :msg)
-      ## TODO store in output buffer
     end
     :ok
   end

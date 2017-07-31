@@ -46,8 +46,7 @@ defmodule ExFix do
   """
   def start_session_initiator(session_name, sender_comp_id, target_comp_id,
       fix_application, opts \\ []) do
-    opts = opts
-    |> Enum.into(%{
+    opts = Enum.into(opts, %{
       socket_connect_host: "localhost",
       socket_connect_port: 9876,
       logon_username: nil,
