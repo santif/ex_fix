@@ -88,7 +88,6 @@ defmodule ExFix.TestHelper do
     |> cs()
   end
 
-
   ##
   ## Private functions
   ##
