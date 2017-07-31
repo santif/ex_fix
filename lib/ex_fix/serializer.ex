@@ -43,7 +43,6 @@ defmodule ExFix.Serializer do
     << head :: binary(), body::binary(), "10=", checksum_bin::binary(), 1 >>
   end
 
-
   ##
   ## Private functions
   ##

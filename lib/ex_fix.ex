@@ -36,6 +36,7 @@ defmodule ExFix do
 
   alias ExFix.SessionRegistry
   alias ExFix.Types.SessionConfig
+  alias ExFix.SessionWorker
   alias ExFix.Types, as: T
 
   @default_dictionary Application.get_env(:ex_fix, :default_dictionary)
@@ -80,7 +81,7 @@ defmodule ExFix do
   """
   @spec send_message!(String.t, String.t, [T.fix_field()]) :: :ok
   def send_message!(session_name, msg_type, fields) do
-    :ok = ExFix.SessionWorker.send_message(session_name, msg_type, fields)
+    :ok = SessionWorker.send_message(session_name, msg_type, fields)
   end
 
   @doc """

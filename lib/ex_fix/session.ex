@@ -365,8 +365,9 @@ defmodule ExFix.Session do
     session = add_to_in_queue(session, msg)
     {:ok, [resend_request], %Session{session | out_lastseq: out_lastseq}}
   end
-  def process_invalid_message(%Session{config: config, out_lastseq: out_lastseq} = session, expected_seqnum,
-      %Message{seqnum: seqnum, fields: fields} = _msg) when seqnum < expected_seqnum do
+  def process_invalid_message(%Session{config: config, out_lastseq: out_lastseq} = session,
+      expected_seqnum, %Message{seqnum: seqnum, fields: fields} = _msg)
+      when seqnum < expected_seqnum do
     case :lists.keyfind(@field_poss_dup_flag, 1, fields) do
       {@field_poss_dup_flag, "Y"} ->
         {:ok, [], session}
@@ -374,7 +375,8 @@ defmodule ExFix.Session do
         out_lastseq = out_lastseq + 1
         text = "MsgSeqNum too low, expecting #{expected_seqnum} but received #{seqnum}"
         logout_msg = build_message(config, @msg_type_logout, out_lastseq, [{@field_text, text}])
-        {:logout, [logout_msg], %Session{session | status: :disconnecting, out_lastseq: out_lastseq}}
+        {:logout, [logout_msg],
+          %Session{session | status: :disconnecting, out_lastseq: out_lastseq}}
     end
   end
 
@@ -383,7 +385,8 @@ defmodule ExFix.Session do
   ##
 
   defp build_message(config, msg_type, seqnum, body) do
-    %SessionConfig{sender_comp_id: sender, target_comp_id: target, time_service: time_service} = config
+    %SessionConfig{sender_comp_id: sender, target_comp_id: target,
+      time_service: time_service} = config
     orig_sending_time = case time_service do
       nil -> DateTime.utc_now()
       {m, f, a} -> :erlang.apply(m, f, a)
