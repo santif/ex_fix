@@ -158,12 +158,12 @@ defmodule ExFix.ExFixTest do
     assert msg.valid
 
     now = DateTime.utc_now()
-    received_logon_msg = %MessageToSend{seqnum: 1, sender: "TARGET",
+    rec_logon = %MessageToSend{seqnum: 1, sender: "TARGET",
       orig_sending_time: now, target: "SENDER",
       msg_type: "A", body: [{"98", "0"}, {"108", 120},
       {"141", true}, {"553", "usr1"}, {"554", "pwd1"},
       {"1137", "9"}]}
-    |> Serializer.serialize(now)
+    received_logon_msg = Serializer.serialize(rec_logon, now)
     TestTransport.receive_data("session4", received_logon_msg, :ssl)
 
     Process.sleep(20)
@@ -185,12 +185,12 @@ defmodule ExFix.ExFixTest do
     assert msg.valid
 
     now = DateTime.utc_now()
-    received_logon_msg = %MessageToSend{seqnum: 1, sender: "TARGET",
+    rec_logon = %MessageToSend{seqnum: 1, sender: "TARGET",
       orig_sending_time: now, target: "SENDER",
       msg_type: "A", body: [{"98", "0"}, {"108", 120},
       {"141", true}, {"553", "usr1"}, {"554", "pwd1"},
       {"1137", "9"}]}
-    |> Serializer.serialize(now)
+    received_logon_msg = Serializer.serialize(rec_logon, now)
     TestTransport.receive_data("session5", received_logon_msg, :tcp)
 
     Process.sleep(20)

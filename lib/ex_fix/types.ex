@@ -11,6 +11,7 @@ defmodule ExFix.Types do
   @type fix_field() :: {String.t, any()}
   @type session_status() :: :offline | :connecting | :online | :disconnecting
   @type session_result() :: {:ok, [MessageToSend.t], Session.t}
+    | {:resend, [MessageToSend.t], Session.t}
     | {:logout, [MessageToSend.t], Session.t}
     | {:stop, Session.t}
   @type session_in_queue() :: [Message.t]

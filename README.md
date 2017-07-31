@@ -5,10 +5,10 @@
 [![Hex.pm Version](http://img.shields.io/hexpm/v/ex_fix.svg?style=flat)](https://hex.pm/packages/ex_fix)
 [![Ebert](https://ebertapp.io/github/santif/ex_fix.svg)](https://ebertapp.io/github/santif/ex_fix)
 
+**Warning:** This library is under active development and the API is subject to change.
+
 Elixir implementation of FIX Session Protocol FIXT.1.1.
 Currently only supports FIX session initiator (buy side).
-
-**Warning:** This library is under active development and the API is subject to change.
 
 ## Installation
 
