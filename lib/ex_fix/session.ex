@@ -69,7 +69,7 @@ defmodule ExFix.Session do
   """
   @spec init(SessionConfig.t) :: {:ok, Session.t}
   def init(%SessionConfig{} = config) do
-    out_queue_table = :ets.new(:out_queue, [:duplicate_bag, :private])
+    out_queue_table = :ets.new(:out_queue, [:ordered_set, :private])
     {:ok, %Session{config: config, out_queue: out_queue_table}}
   end
 
@@ -422,15 +422,13 @@ defmodule ExFix.Session do
   end
 
   defp resend_messages(out_queue, begin_seq, end_seq) do
-    ## TODO replace with :ets.select()
-    filter = fn({seq, _msg}) ->
-      (seq >= begin_seq) and ((end_seq == 0) or (end_seq > 0 and seq <= end_seq))
+    guard = case end_seq do
+      0 ->
+        {:">", :"$2", begin_seq}
+      v when v > 0 ->
+        {:andalso, {:">=", :"$1", begin_seq}, {:"=<", :"$1", end_seq}}
     end
-    mapper = fn({_seq, msg}) -> msg end
-    out_queue
-    |> :ets.tab2list()
-    |> Enum.filter(filter)
-    |> Enum.map(mapper)
+    :ets.select(out_queue, [{{:"$1", :"$2"}, [guard], [:"$2"]}])
   end
 
   defp process_sequence_reset(true = _gap_fill, new_seq_no, seqnum, expected_seqnum, session)
