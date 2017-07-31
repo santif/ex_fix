@@ -2,10 +2,10 @@
 
 [![Master](https://travis-ci.org/santif/ex_fix.svg?branch=master)](https://travis-ci.org/santif/ex_fix)
 [![Coverage Status](https://coveralls.io/repos/github/santif/ex_fix/badge.svg?branch=master)](https://coveralls.io/github/santif/ex_fix?branch=master)
+[![Tokei](https://tokei.rs/b1/github/santif/ex_fix?category=code)](https://tokei.rs/b1/github/santif/ex_fix?category=code)
 [![Hex.pm Version](http://img.shields.io/hexpm/v/ex_fix.svg?style=flat)](https://hex.pm/packages/ex_fix)
 [![Ebert](https://ebertapp.io/github/santif/ex_fix.svg)](https://ebertapp.io/github/santif/ex_fix)
-[![Tokei](https://tokei.rs/b1/github/santif/ex_fix?category=code)](https://tokei.rs/b1/github/santif/ex_fix?category=code)
-[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 **Warning:** This library is under active development and the API is subject to change.
 
