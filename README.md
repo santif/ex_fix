@@ -8,6 +8,8 @@
 Elixir implementation of FIX Session Protocol FIXT.1.1.
 Currently only supports FIX session initiator (buy side).
 
+**Warning:** This library is under active development and the API is subject to change.
+
 ## Installation
 
 Add `ex_fix` to your list of dependencies in `mix.exs`:
