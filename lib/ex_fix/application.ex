@@ -6,7 +6,7 @@ defmodule ExFix.Application do
     import Supervisor.Spec, warn: false
 
     children = [
-      worker(ExFix.SessionRegistry, []),
+      worker(ExFix.DefaultSessionRegistry, []),
       supervisor(ExFix.SessionSup, []),
     ]
 

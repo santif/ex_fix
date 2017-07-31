@@ -5,7 +5,6 @@ defmodule ExFix.SessionWorker do
 
   require Logger
   use GenServer
-  alias ExFix.SessionRegistry
   alias ExFix.Session
   alias ExFix.Types.SessionConfig
   alias ExFix.Serializer
@@ -13,6 +12,7 @@ defmodule ExFix.SessionWorker do
 
   @compile {:inline, handle_data: 2}
 
+  @session_registry Application.get_env(:ex_fix, :session_registry)
   @rx_heartbeat_tolerance Application.get_env(:ex_fix, :rx_heartbeat_tolerance, 1.2)
   @logout_timeout Application.get_env(:ex_fix, :logout_timeout, 2_000)
 
@@ -52,7 +52,7 @@ defmodule ExFix.SessionWorker do
 
   def init([config]) do
     Logger.debug fn -> "SessionWorker.init() - config: #{inspect config}" end
-    action = SessionRegistry.session_on_init(config.name)
+    action = @session_registry.session_on_init(config.name)
     send(self(), {:init, action, config})
     {:ok, %State{name: config.name, mode: config.mode,
       log_outgoing_msg: config.log_outgoing_msg}}
@@ -114,11 +114,11 @@ defmodule ExFix.SessionWorker do
   end
 
   def terminate(:econnrefused, %State{name: fix_session_name} = _state) do
-    SessionRegistry.session_update_status(fix_session_name, :reconnecting)
+    @session_registry.session_update_status(fix_session_name, :reconnecting)
     :ok
   end
   def terminate(:closed, %State{name: fix_session_name} = _state) do
-    SessionRegistry.session_update_status(fix_session_name, :reconnecting)
+    @session_registry.session_update_status(fix_session_name, :reconnecting)
     :ok
   end
   def terminate(_reason, _state), do: :ok
@@ -195,7 +195,7 @@ defmodule ExFix.SessionWorker do
   defp setup_rx_timer(%Session{config: %SessionConfig{name: name, heart_bt_int: heart_bt_int}}) do
     interval = round(heart_bt_int * 1_000 * @rx_heartbeat_tolerance)
     rx_timer = SessionTimer.setup_timer(:rx, interval)
-    SessionRegistry.session_update_status(name, :connected)
+    @session_registry.session_update_status(name, :connected)
     rx_timer
   end
 end

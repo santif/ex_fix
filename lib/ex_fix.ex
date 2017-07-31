@@ -34,12 +34,12 @@ defmodule ExFix do
   ```
   """
 
-  alias ExFix.SessionRegistry
   alias ExFix.Types.SessionConfig
   alias ExFix.SessionWorker
   alias ExFix.Types, as: T
 
   @default_dictionary Application.get_env(:ex_fix, :default_dictionary)
+  @session_registry Application.get_env(:ex_fix, :session_registry)
 
   @doc """
   Starts FIX session initiator
@@ -72,7 +72,7 @@ defmodule ExFix do
       fix_application: fix_application,
       dictionary: @default_dictionary,
     }, opts)
-    SessionRegistry.start_session(session_name, config)
+    @session_registry.start_session(session_name, config)
   end
 
   @doc """
@@ -87,6 +87,6 @@ defmodule ExFix do
   Stop FIX session
   """
   def stop_session(session_name) do
-    SessionRegistry.stop_session(session_name)
+    @session_registry.stop_session(session_name)
   end
 end
