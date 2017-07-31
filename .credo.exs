@@ -74,7 +74,7 @@
         {Credo.Check.Design.DuplicatedCode, excluded_macros: []},
 
         # You can also customize the exit_status of each check.
-        # If you don't want TODO comments to cause `mix credo` to fail, just
+        # If you don't want TO DO comments to cause `mix credo` to fail, just
         # set this value to 0 (zero).
         #
         {Credo.Check.Design.TagTODO, exit_status: 2},
@@ -102,7 +102,7 @@
         {Credo.Check.Refactor.CondStatements},
         {Credo.Check.Refactor.CyclomaticComplexity},
         {Credo.Check.Refactor.FunctionArity},
-        {Credo.Check.Refactor.LongQuoteBlocks},
+        #{Credo.Check.Refactor.LongQuoteBlocks},
         {Credo.Check.Refactor.MatchInCondition},
         {Credo.Check.Refactor.NegatedConditionsInUnless},
         {Credo.Check.Refactor.NegatedConditionsWithElse},
