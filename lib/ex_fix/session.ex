@@ -213,17 +213,26 @@ defmodule ExFix.Session do
     {:resend, msgs, %Session{session | in_lastseq: expected_seqnum}}
   end
 
-  def process_incoming_message(_expected_seqnum, @msg_type_reject, _session_name,
-      %Session{} = session, %Message{seqnum: seqnum}) do
-    ## TODO warning
+  def process_incoming_message(_expected_seqnum, @msg_type_reject, session_name,
+      %Session{} = session, %Message{seqnum: seqnum} = msg) do
+    Logger.warn fn -> "[fix.warning] [#{session_name}] Reject received: " <>
+      :unicode.characters_to_binary(msg.original_fix_msg, :latin1, :utf8) end
     {:ok, [], %Session{session | in_lastseq: seqnum}}
   end
 
   def process_incoming_message(expected_seqnum, @msg_type_sequence_reset, _session_name,
-      session, %Message{seqnum: seqnum, fields: fields}) do
+      session, %Message{seqnum: seqnum, fields: fields} = msg) do
     gap_fill = :lists.keyfind(@field_gap_fill_flag, 1, fields) == {@field_gap_fill_flag, "Y"}
     {@field_new_seq_no, new_seq_no_str} = :lists.keyfind(@field_new_seq_no, 1, fields)
     {new_seq_no, _} = Integer.parse(new_seq_no_str)
+    if not gap_fill and new_seq_no == seqnum and expected_seqnum == new_seq_no do
+      Logger.warn fn ->
+        %Session{config: %SessionConfig{name: session_name}} = session
+        "[fix.warning] [#{session_name}] " <>
+          "SeqReset GapFill with new_seq_no == seqnum == expected_seqnum: " <>
+          :unicode.characters_to_binary(msg.original_fix_msg, :latin1, :utf8)
+      end
+    end
     process_sequence_reset(gap_fill, new_seq_no, seqnum, expected_seqnum, session)
   end
 
@@ -331,8 +340,12 @@ defmodule ExFix.Session do
   """
   @spec process_invalid_message(Session.t, integer(), Message.t) :: T.session_result
   def process_invalid_message(session, _expected_seqnum, %Message{valid: false,
-      error_reason: :garbled}) do
-    ## TODO warning
+      error_reason: :garbled} = msg) do
+    Logger.warn fn ->
+      %Session{config: %SessionConfig{name: session_name}} = session
+      "[fix.warning] [#{session_name}] Garbled: " <>
+        :unicode.characters_to_binary(msg.original_fix_msg, :latin1, :utf8)
+    end
     {:ok, [], session}
   end
   def process_invalid_message(%Session{config: config, out_lastseq: out_lastseq} = session,
@@ -424,7 +437,6 @@ defmodule ExFix.Session do
   end
   defp process_sequence_reset(false = _gap_fill, new_seq_no, seqnum, expected_seqnum, session)
       when new_seq_no == seqnum and expected_seqnum == new_seq_no do
-    ## TODO warning
     {:ok, [], %Session{session | in_lastseq: new_seq_no - 1}}
   end
   defp process_sequence_reset(false = _gap_fill, new_seq_no, seqnum, expected_seqnum,
