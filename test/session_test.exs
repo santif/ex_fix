@@ -40,8 +40,7 @@ defmodule ExFix.SessionTest do
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=A|34=1|49=SELLSIDE|" <>
       "52=20170506-17:18:19.123|56=BUYSIDE|98=0|108=120|141=Y|" <>
       "553=testuser|554=testpwd|1137=9|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert msgs_to_send == []
@@ -57,8 +56,7 @@ defmodule ExFix.SessionTest do
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=D|34=#{msg_seqnum}|49=SELLSIDE|" <>
       "52=20170717-17:50:56.560|56=BUYSIDE|1=1234|11=cod12345|38=10|40=2|" <>
       "44=1.23|54=1|55=SYM1|59=0|60=20170717-17:50:56.559|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert msgs_to_send == [%MessageToSend{seqnum: 6, msg_type: @msg_type_resend_request,
       sender: "BUYSIDE", orig_sending_time: FixDummyApplication.now(), target: "SELLSIDE",
@@ -84,8 +82,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 9
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
       "52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|")
-    {:logout, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :disconnecting
 
@@ -109,8 +106,7 @@ defmodule ExFix.SessionTest do
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
     incoming_data = msg("8=FIXT.1.1|9=$$$|garbled|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert length(msgs_to_send) == 0
@@ -124,8 +120,7 @@ defmodule ExFix.SessionTest do
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
     incoming_data = msg("garbled_garbled_garbled_garbled_garbled")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert length(msgs_to_send) == 0
@@ -141,8 +136,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 9
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
       "43=Y|52=20170717-17:50:56.123|122=20170717-17:49:00.000|56=BUYSIDE|1=1234|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert length(msgs_to_send) == 0
@@ -159,8 +153,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
       "43=Y|52=20170717-17:50:56.123|122=20170717-17:51:00.000|56=BUYSIDE|1=1234|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert Session.get_in_lastseq(session) == 11
@@ -187,8 +180,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
       "43=Y|52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert Session.get_in_lastseq(session) == 11
@@ -217,8 +209,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     incoming_data = msg("8=INCORRECT_BEGIN_STRING|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
       "52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|")
-    {:logout, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :disconnecting
 
@@ -248,8 +239,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=OTHER_BUYSIDE|" <>
       "52=20170717-17:50:56.123|56=SELLSIDE|1=1234|10=$$$|")
-    {:logout, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :disconnecting
 
@@ -287,8 +277,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
       "52=20170717-17:50:56.123|56=OTHER_BUYSIDE|1=1234|10=$$$|")
-    {:logout, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :disconnecting
 
@@ -322,53 +311,12 @@ defmodule ExFix.SessionTest do
     incorrect_body_length = 5
     incoming_data = msg("8=FIXT.1.1|9=#{incorrect_body_length}|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
       "52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
 
     assert length(msgs_to_send) == 0
   end
-
-  # test "SendingTime accuracy problem (p. 53)", %{config: cfg} do
-  #   # 1. Send Reject (session-level) with SessionRejectReason = "SendingTime accuracy problem")
-  #   # 2. Increment inbound MsgSeqNum
-  #   # 3. Send Logout message referencing inaccurate SendingTime value
-  #   # 4. Optional - Wait for Logout message response (note likely will have inaccurate SendingTime)
-  #   #    or wait 2 seconds whichever comes first
-  #   # 5. Disconnect
-  #   # Error condition
-
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
-
-  #   msg_seqnum = 11
-  #   incorrect_sending_time = "20170717-10:50:56.123"
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
-  #     "52=#{incorrect_sending_time}|56=BUYSIDE|1=1234|10=$$$|")
-  #   {:logout, msgs_to_send, session} = session
-  #   |> Session.handle_incoming_data(incoming_data)
-
-  #   assert Session.get_status(session) == :disconnecting
-
-  #   assert length(msgs_to_send) == 2
-  #   [reject_msg, logout_msg] = msgs_to_send
-
-  #   assert reject_msg.seqnum == 6
-  #   assert reject_msg.msg_type == @msg_type_reject
-  #   assert reject_msg.sender == "BUYSIDE"
-  #   assert reject_msg.target == "SELLSIDE"
-  #   assert reject_msg.orig_sending_time == FixDummyApplication.now()
-  #   assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "10"}
-  #   assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "SendingTime accuracy problem"}
-
-  #   assert logout_msg.seqnum == 7
-  #   assert logout_msg.msg_type == @msg_type_logout
-  #   assert logout_msg.sender == "BUYSIDE"
-  #   assert logout_msg.target == "SELLSIDE"
-  #   assert logout_msg.orig_sending_time == FixDummyApplication.now()
-  #   assert :lists.keyfind("58", 1, logout_msg.body) == {"58", "Inaccurate SendingTime value"}
-  # end
 
   test "Checksum error (p. 55)", %{config: cfg} do
     # > CheckSum error is not the last field of message, value doesn't have length of 3, or isn't delimited by SOH
@@ -381,8 +329,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=BUYSIDE|" <>
       "52=20170717-17:50:56.123|56=SELLSIDE|10=ERR")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert Session.get_in_lastseq(session) == 10
@@ -399,8 +346,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=1|34=#{msg_seqnum}|49=BUYSIDE|" <>
       "52=20170717-17:50:56.123|56=SELLSIDE|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
 
@@ -421,8 +367,7 @@ defmodule ExFix.SessionTest do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_timeout(:rx)
+    {:ok, msgs_to_send, session} = Session.handle_timeout(session, :rx)
 
     assert Session.get_status(session) == :online
 
@@ -438,8 +383,7 @@ defmodule ExFix.SessionTest do
 
     assert Session.get_last_test_req_id(session) == test_req_id
 
-    {:logout, [logout_msg], session} = session
-    |> Session.handle_timeout(:rx)
+    {:logout, [logout_msg], session} = Session.handle_timeout(session, :rx)
 
     assert Session.get_status(session) == :disconnecting
     assert logout_msg.seqnum == 7
@@ -455,22 +399,22 @@ defmodule ExFix.SessionTest do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 1, out_lastseq: 1}
 
-    {:ok, _, session} = session
-    |> Session.send_message("D", [{"1", 100}, {"55", "Symbol1"}, {"44", 4.56}]) # seqnum 2
-    {:ok, _, session} = session
-    |> Session.send_message("D", [{"1", 101}, {"55", "Symbol1"}, {"44", 4.56}]) # seqnum 3
-    {:ok, _, session} = session
-    |> Session.send_message("0", []) # seqnum 4 (heartbeat)
-    {:ok, _, session} = session
-    |> Session.send_message("D", [{"1", 103}, {"55", "Symbol1"}, {"44", 4.56}]) # seqnum 5
+    {:ok, _, session} = Session.send_message(session, "D",
+      [{"1", 100}, {"55", "Symbol1"}, {"44", 4.56}]) # seqnum 2
+    {:ok, _, session} = Session.send_message(session, "D",
+      [{"1", 101}, {"55", "Symbol1"}, {"44", 4.56}]) # seqnum 3
+    {:ok, _, session} = Session.send_message(session, "0",
+      []) # seqnum 4 (heartbeat)
+    {:ok, _, session} = Session.send_message(session, "D",
+      [{"1", 103}, {"55", "Symbol1"}, {"44", 4.56}]) # seqnum 5
 
     msg_seqnum = 2
     tag_begin_seq_no = "7"
     tag_end_seq_no = "16"
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=2|34=#{msg_seqnum}|49=BUYSIDE|" <>
       "52=20170717-17:50:56.123|56=SELLSIDE|#{tag_begin_seq_no}=2|#{tag_end_seq_no}=4|10=$$$|")
-    {:resend, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+
+    {:resend, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert length(msgs_to_send) == 3
     assert Session.get_status(session) == :online
@@ -488,8 +432,7 @@ defmodule ExFix.SessionTest do
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|34=#{msg_seqnum}|" <>
       "49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|#{tag_new_seq_no}=14|" <>
       "123=Y|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert Session.get_in_lastseq(session) == 10
@@ -521,8 +464,7 @@ defmodule ExFix.SessionTest do
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|34=#{msg_seqnum}|" <>
       "49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|#{tag_new_seq_no}=14|" <>
       "123=Y|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert Session.get_in_lastseq(session) == 14
@@ -541,8 +483,7 @@ defmodule ExFix.SessionTest do
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|34=#{msg_seqnum}|" <>
       "49=BUYSIDE|43=Y|52=20170717-17:50:56.123|56=SELLSIDE|#{tag_new_seq_no}=14|" <>
       "123=Y|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert Session.get_in_lastseq(session) == 10
@@ -565,8 +506,7 @@ defmodule ExFix.SessionTest do
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|34=#{msg_seqnum}|" <>
       "49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|#{tag_new_seq_no}=14|" <>
       "123=Y|10=$$$|")
-    {:logout, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :disconnecting
     assert length(msgs_to_send) == 1
@@ -593,8 +533,7 @@ defmodule ExFix.SessionTest do
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|" <>
       "34=#{msg_seqnum}|49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|" <>
       "#{tag_new_seq_no}=10|123=Y|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert Session.get_in_lastseq(session) == 10
@@ -623,8 +562,7 @@ defmodule ExFix.SessionTest do
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|" <>
       "34=#{msg_seqnum}|49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|" <>
       "#{tag_new_seq_no}=15|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert Session.get_in_lastseq(session) == 14
@@ -643,8 +581,7 @@ defmodule ExFix.SessionTest do
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|" <>
       "34=#{msg_seqnum}|49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|" <>
       "#{tag_new_seq_no}=11|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert Session.get_in_lastseq(session) == 10
@@ -666,8 +603,7 @@ defmodule ExFix.SessionTest do
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|" <>
       "34=#{msg_seqnum}|49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|" <>
       "#{tag_new_seq_no}=9|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
     assert Session.get_in_lastseq(session) == 10
@@ -692,8 +628,7 @@ defmodule ExFix.SessionTest do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-    {:logout_and_wait, msgs_to_send, session} = session
-    |> Session.session_stop()
+    {:logout_and_wait, msgs_to_send, session} = Session.session_stop(session)
 
     assert Session.get_status(session) == :disconnecting
     assert length(msgs_to_send) == 1
@@ -715,8 +650,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_logout}|" <>
       "34=#{msg_seqnum}|49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|10=$$$|")
-    {:ok, msgs_to_send, session} = session
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :offline
     assert length(msgs_to_send) == 0
@@ -732,8 +666,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_logout}|" <>
       "34=#{msg_seqnum}|49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|10=$$$|")
-    {:ok, msgs_to_send, session} = session  # ???
-    |> Session.handle_incoming_data(incoming_data)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :disconnecting
     assert length(msgs_to_send) == 1
@@ -745,33 +678,4 @@ defmodule ExFix.SessionTest do
     assert logout.sender == "BUYSIDE"
     assert logout.target == "SELLSIDE"
   end
-
-  # test "Receive msg with a field of data, other than 'data' which contains <SOH> values (p. 61)", %{config: cfg} do
-  #   ## 1. Send Reject (session level) msg with SessionRejectReason: Non "data" value includes field delimiter (SOH character)
-  #   ## 2. Increment inbound MsgSeqNum
-  #   ## 3. Error condition
-  #   ## consider garbled and ignore message
-
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
-
-  #   msg_seqnum = 11
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
-  #     "52=20170717-17:50:56.123|56=BUYSIDE|1=accou|nt|10=$$$|")
-  #   {:ok, msgs_to_send, session} = session
-  #   |> Session.handle_incoming_data(incoming_data)
-
-  #   assert Session.get_status(session) == :online
-  #   assert Session.get_in_lastseq(session) == 11
-  #   assert length(msgs_to_send) == 1
-  #   [reject_msg] = msgs_to_send
-
-  #   assert reject_msg.seqnum == 6
-  #   assert reject_msg.msg_type == @msg_type_reject
-  #   assert reject_msg.sender == "BUYSIDE"
-  #   assert reject_msg.target == "SELLSIDE"
-  #   assert reject_msg.orig_sending_time == FixDummyApplication.now()
-  #   assert :lists.keyfind("58", 1, reject_msg.body) ==
-  #     {"58", "Non \"data\" value includes field delimiter (SOH character)"}
-  # end
 end
