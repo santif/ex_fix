@@ -76,7 +76,7 @@ defmodule ExFix.SessionWorker do
       :ok ->
         connect_and_send_logon(config, state)
       :wait_to_reconnect ->
-        Logger.info "Waiting #{config.reconnect_interval} seconds to reconnect..."
+        Logger.info fn  -> "Waiting #{config.reconnect_interval} seconds to reconnect..." end
         Process.sleep(config.reconnect_interval * 1_000)
         connect_and_send_logon(config, state)
       {:error, _reason} ->
@@ -152,8 +152,8 @@ defmodule ExFix.SessionWorker do
     for msg <- msgs_to_send do
       data = Serializer.serialize(msg, DateTime.utc_now(), resend)
       if log_outgoing_msg do
-        Logger.info "[fix.outgoing] [#{fix_session_name}] " <>
-          :unicode.characters_to_binary(data, :latin1, :utf8)
+        Logger.info fn -> "[fix.outgoing] [#{fix_session_name}] " <>
+          :unicode.characters_to_binary(data, :latin1, :utf8) end
       end
       transport.send(client, data)
       send(tx_timer, :msg)

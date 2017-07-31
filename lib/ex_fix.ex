@@ -1,6 +1,37 @@
 defmodule ExFix do
   @moduledoc """
-  TODO Documentation for ExFix
+  Elixir implementation of FIX Session Protocol FIXT.1.1.
+  Currently only supports FIX session initiator (buy side).
+
+  ## Usage
+
+  ```
+  defmodule MyFixApplication do
+    @behaviour ExFix.FixApplication
+    require Logger
+
+    alias ExFix.Types.Message
+    alias ExFix.Parser
+
+    @msg_new_order_single "D"
+
+    def on_logon(fix_session_name, session_pid) do
+      fields = []  # See examples directory
+      ExFix.send_message!(session_pid, @msg_new_order_single, fields)
+    end
+
+    def on_message(fix_session_name, msg_type, session_pid, %Message{} = msg) do
+      Logger.info "Msg received: \#{inspect msg = Parser.parse2(msg)}"
+    end
+
+    def before_logon(_fix_session_name, _fields), do: :ok
+    def on_logout(_fix_session_name), do: :ok
+  end
+
+  ExFix.start_session_initiator("mysession", "SENDER", "TARGET", MyFixApplication,
+    socket_connect_host: "localhost", socket_connect_port: 9876,
+    logon_username: "user1", logon_password: "pwd1", transport_mod: :ssl)
+  ```
   """
 
   alias ExFix.SessionRegistry

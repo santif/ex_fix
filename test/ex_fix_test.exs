@@ -2,10 +2,12 @@ defmodule ExFix.ExFixTest do
   use ExUnit.Case
 
   alias ExFix.SessionRegistry
-  alias ExFix.{Parser, Serializer}
+  alias ExFix.Parser
+  alias ExFix.Serializer
   alias ExFix.DefaultDictionary
   alias ExFix.Types.MessageToSend
-  alias ExFix.TestHelper.{FixEmptyApplication, TestTransport}
+  alias ExFix.TestHelper.FixEmptyApplication
+  alias ExFix.TestHelper.TestTransport
 
   @tag_account       "1"
   @tag_cl_ord_id     "11"
@@ -36,12 +38,12 @@ defmodule ExFix.ExFixTest do
     assert msg.valid
 
     now = DateTime.utc_now()
-    received_logon_msg = %MessageToSend{seqnum: 1, sender: "TARGET",
+    rec_logon = %MessageToSend{seqnum: 1, sender: "TARGET",
       orig_sending_time: now, target: "SENDER",
       msg_type: "A", body: [{"98", "0"}, {"108", 120},
       {"141", true}, {"553", "usr1"}, {"554", "pwd1"},
       {"1137", "9"}]}
-    |> Serializer.serialize(now)
+    received_logon_msg = Serializer.serialize(rec_logon, now)
 
     TestTransport.receive_data("session1", received_logon_msg)
     Process.sleep(20)
@@ -82,10 +84,8 @@ defmodule ExFix.ExFixTest do
       {"150", "F"},
       {"151", 0},
     ]
-    received_logon_msg = %MessageToSend{seqnum: 2, sender: "TARGET",
-      orig_sending_time: now, target: "SENDER",
-      msg_type: "8", body: er_body}
-    |> Serializer.serialize(now)
+    received_logon_msg = Serializer.serialize(%MessageToSend{seqnum: 2, sender: "TARGET",
+      orig_sending_time: now, target: "SENDER", msg_type: "8", body: er_body}, now)
 
     TestTransport.receive_data("session1", received_logon_msg)
 
@@ -107,12 +107,12 @@ defmodule ExFix.ExFixTest do
     assert msg.valid
 
     now = DateTime.utc_now()
-    received_logon_msg = %MessageToSend{seqnum: 1, sender: "TARGET",
+    rec_msg = %MessageToSend{seqnum: 1, sender: "TARGET",
       orig_sending_time: now, target: "SENDER",
       msg_type: "A", body: [{"98", "0"}, {"108", 120},
       {"141", true}, {"553", "usr1"}, {"554", "pwd1"},
       {"1137", "9"}]}
-    |> Serializer.serialize(now)
+    received_logon_msg = Serializer.serialize(rec_msg, now)
     TestTransport.receive_data("session2", received_logon_msg, :tcp)
 
     Process.sleep(20)
@@ -131,12 +131,12 @@ defmodule ExFix.ExFixTest do
     assert msg.valid
 
     now = DateTime.utc_now()
-    received_logon_msg = %MessageToSend{seqnum: 1, sender: "TARGET",
+    rec_logon = %MessageToSend{seqnum: 1, sender: "TARGET",
       orig_sending_time: now, target: "SENDER",
       msg_type: "A", body: [{"98", "0"}, {"108", 120},
       {"141", true}, {"553", "usr1"}, {"554", "pwd1"},
       {"1137", "9"}]}
-    |> Serializer.serialize(now)
+    received_logon_msg = Serializer.serialize(rec_logon, now)
     TestTransport.receive_data("session3", received_logon_msg, :tcp)
 
     Process.sleep(20)

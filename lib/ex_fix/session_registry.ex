@@ -55,7 +55,7 @@ defmodule ExFix.SessionRegistry do
   end
 
   def session_update_status(fix_session_name, status) do
-    Logger.info "session_update_status [#{fix_session_name}] - Status: #{inspect status}"
+    Logger.info fn -> "session_update_status [#{fix_session_name}] - Status: #{inspect status}" end
     :ets.insert(@ets_table, {fix_session_name, status})
   end
 
@@ -64,7 +64,7 @@ defmodule ExFix.SessionRegistry do
   ##
 
   def init([]) do
-    Logger.debug "Starting FIX Session Registry"
+    Logger.debug fn -> "Starting FIX Session Registry" end
     :ets.new(@ets_table, [:public, :named_table])
     {:ok, %State{}}
   end
@@ -73,8 +73,7 @@ defmodule ExFix.SessionRegistry do
       %State{monitor_map: monitor_map} = state) do
     ref = Process.monitor(pid)
 
-    monitor_map = monitor_map
-    |> Map.put(ref, fix_session_name)
+    monitor_map = Map.put(monitor_map, ref, fix_session_name)
 
     result = case :ets.lookup(@ets_table, fix_session_name) do
       [] ->

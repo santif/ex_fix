@@ -30,9 +30,8 @@ defmodule ExFix.SerializerTest do
       {@tag_time_in_force, "0"},
       {@tag_transact_time, transact_time},
     ]
-    bin_message = %MessageToSend{seqnum: 10, sender: "SENDER",
-      orig_sending_time: now, target: "TARGET", msg_type: "D", body: body}
-    |> Serializer.serialize(now)
+    bin_message = Serializer.serialize(%MessageToSend{seqnum: 10, sender: "SENDER",
+      orig_sending_time: now, target: "TARGET", msg_type: "D", body: body}, now)
 
     assert bin_message == msg("8=FIXT.1.1|9=137|35=D|34=10|49=SENDER|" <>
       "52=20170717-17:50:56.560|56=TARGET|1=1234|11=cod12345|38=10|40=2|" <>
@@ -49,9 +48,8 @@ defmodule ExFix.SerializerTest do
       {"554", "testpwd"},
       {"1137", "9"}
     ]
-    bin_message = %MessageToSend{seqnum: 1, sender: "SENDER", orig_sending_time: now,
-      target: "TARGET", msg_type: "A", body: body}
-    |> Serializer.serialize(now)
+    bin_message = Serializer.serialize(%MessageToSend{seqnum: 1, sender: "SENDER",
+      orig_sending_time: now, target: "TARGET", msg_type: "A", body: body}, now)
 
     assert bin_message == msg("8=FIXT.1.1|9=106|35=A|34=1|49=SENDER|" <>
       "52=20170506-17:18:19.123|56=TARGET|98=0|108=120|141=Y|" <>
@@ -71,9 +69,8 @@ defmodule ExFix.SerializerTest do
       {"554", "testpwd"},
       {"1137", "9"}
     ]
-    bin_message = %MessageToSend{seqnum: 1, sender: "SENDER", orig_sending_time: now,
-      target: "TARGET", msg_type: "A", body: body}
-    |> Serializer.serialize(now)
+    bin_message = Serializer.serialize(%MessageToSend{seqnum: 1, sender: "SENDER",
+      orig_sending_time: now, target: "TARGET", msg_type: "A", body: body}, now)
 
     expected_message = msg("8=FIXT.1.1|9=106|35=A|34=1|49=SENDER|" <>
       "52=20170506-14:12:13.000|56=TARGET|98=0|108=120|141=Y|" <>
@@ -86,9 +83,8 @@ defmodule ExFix.SerializerTest do
     now = %DateTime{year: 2017, month: 07, day: 17, zone_abbr: "UTC",
       hour: 17, minute: 50, second: 56, microsecond: {560_000, 3},
       utc_offset: 0, std_offset: 0, time_zone: "Etc/UTC"}
-    bin_message = %MessageToSend{seqnum: 10, sender: "SENDER", orig_sending_time: now,
-      target: "Dólar", msg_type: "D", body: []}
-    |> Serializer.serialize(now)
+    bin_message = Serializer.serialize(%MessageToSend{seqnum: 10, sender: "SENDER",
+      orig_sending_time: now, target: "Dólar", msg_type: "D", body: []}, now)
 
     expected_message = msg("8=FIXT.1.1|9=55|35=D|34=10|49=SENDER|" <>
       "52=20170717-17:50:56.560|56=Dólar|10=171|")

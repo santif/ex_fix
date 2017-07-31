@@ -27,10 +27,10 @@ defmodule ExFix.Mixfile do
   end
 
   defp package do
-    [ licenses: ["Apache 2"],
-      files: ["lib", "mix.exs", "README.md", "LICENSE"],
-      maintainers: ["Santiago Fernandez"],
-      links: %{ "GitHub": "https://github.com/santif/ex_fix" } ]
+    [licenses: ["Apache 2"],
+     files: ["lib", "mix.exs", "README.md", "LICENSE"],
+     maintainers: ["Santiago Fernandez"],
+     links: %{"GitHub": "https://github.com/santif/ex_fix"}]
   end
 
   defp deps do
