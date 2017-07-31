@@ -45,7 +45,6 @@ defmodule ExFix.SessionWorker do
     GenServer.call(name, :stop)
   end
 
-
   ##
   ## GenServer callbacks
   ##
@@ -117,7 +116,6 @@ defmodule ExFix.SessionWorker do
     Logger.warn "terminate: #{inspect reason}"
     :ok
   end
-
 
   ##
   ## Private functions

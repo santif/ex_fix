@@ -14,7 +14,6 @@ defmodule ExFix.SessionRegistry do
     defstruct monitor_map: %{}
   end
 
-
   ##
   ## API
   ##
@@ -44,7 +43,6 @@ defmodule ExFix.SessionRegistry do
     end
   end
 
-
   ##
   ## Internal API (functions to use from FIX session genservers)
   ##
@@ -60,7 +58,6 @@ defmodule ExFix.SessionRegistry do
     Logger.info "session_update_status [#{fix_session_name}] - Status: #{inspect status}"
     :ets.insert(@ets_table, {fix_session_name, status})
   end
-
 
   ##
   ## GenServer callbacks

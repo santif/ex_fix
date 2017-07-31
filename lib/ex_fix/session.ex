@@ -25,7 +25,6 @@ defmodule ExFix.Session do
     out_queue: nil,
     last_test_req_id_sent: nil
 
-
   ##
   ## Constants
   ##
@@ -276,7 +275,6 @@ defmodule ExFix.Session do
     end
   end
 
-
   def process_incoming_message(_expected_seqnum, msg_type, session_name,
       %Session{config: config, out_lastseq: out_lastseq} = session,
       %Message{poss_dup: true, seqnum: seqnum, fields: fields} = msg) do
@@ -366,7 +364,6 @@ defmodule ExFix.Session do
         {:logout, [logout_msg], %Session{session | status: :disconnecting, out_lastseq: out_lastseq}}
     end
   end
-
 
   ##
   ## Private functions

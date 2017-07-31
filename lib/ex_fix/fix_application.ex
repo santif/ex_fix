@@ -23,7 +23,6 @@ defmodule ExFix.FixApplication do
   @callback on_message(session_name :: String.t, msg_type :: String.t,
     pid :: pid(), msg :: Message.t) :: any()
 
-
   @doc """
   Logout callback
   """

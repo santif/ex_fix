@@ -15,7 +15,6 @@ defmodule ExFix.Types do
     | {:stop, Session.t}
   @type session_in_queue() :: [Message.t]
 
-
   defmodule MessageToSend do
     @moduledoc false
     alias ExFix.Types.MessageToSend
