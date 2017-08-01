@@ -12,7 +12,7 @@ defmodule ExFix.SessionWorker do
 
   @compile {:inline, handle_data: 2}
 
-  @session_registry Application.get_env(:ex_fix, :session_registry)
+  @session_registry Application.get_env(:ex_fix, :session_registry, ExFix.DefaultSessionRegistry)
   @rx_heartbeat_tolerance Application.get_env(:ex_fix, :rx_heartbeat_tolerance, 1.2)
   @logout_timeout Application.get_env(:ex_fix, :logout_timeout, 2_000)
 

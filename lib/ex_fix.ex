@@ -39,7 +39,7 @@ defmodule ExFix do
   alias ExFix.Types, as: T
 
   @default_dictionary Application.get_env(:ex_fix, :default_dictionary)
-  @session_registry Application.get_env(:ex_fix, :session_registry)
+  @session_registry Application.get_env(:ex_fix, :session_registry, ExFix.DefaultSessionRegistry)
 
   @doc """
   Starts FIX session initiator

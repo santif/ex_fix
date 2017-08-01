@@ -1,7 +1,6 @@
 defmodule ExFix.ExFixTest do
   use ExUnit.Case
 
-  alias ExFix.SessionRegistry
   alias ExFix.Parser
   alias ExFix.Serializer
   alias ExFix.DefaultDictionary
@@ -9,7 +8,7 @@ defmodule ExFix.ExFixTest do
   alias ExFix.TestHelper.FixEmptyApplication
   alias ExFix.TestHelper.TestTransport
 
-  @session_registry Application.get_env(:ex_fix, :session_registry)
+  @session_registry Application.get_env(:ex_fix, :session_registry, ExFix.DefaultSessionRegistry)
 
   @tag_account       "1"
   @tag_cl_ord_id     "11"
