@@ -12,9 +12,10 @@ defmodule ExFix.Parser do
   Parse full message
   """
   def parse(data, dictionary, expected_seqnum \\ nil, validate \\ true) do
-    data
-    |> parse1(dictionary, expected_seqnum, validate)
-    |> parse2()
+    with %Message{valid: true} = msg1 <- parse1(data, dictionary, expected_seqnum, validate),
+         msg2 <- parse2(msg1) do
+      msg2
+    end
   end
 
   @doc """
