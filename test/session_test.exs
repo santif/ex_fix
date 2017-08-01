@@ -287,79 +287,80 @@ defmodule ExFix.SessionTest do
     assert :lists.keyfind("58", 1, logout_msg.body) == {"58", "Incorrect SenderCompID value"}
   end
 
-  # test "Unexpected TargetCompID", %{config: cfg} do
-  #   # 1. Send Reject (session-level) with SessionRejectReason = "CompID problem")
-  #   # 2. Increment inbound MsgSeqNum
-  #   # 3. Send Logout message referencing incorrect SenderCompID or TargetCompID value
-  #   # 4. Optional - Wait for Logout message response (note likely will have incorrect SenderCompID or TargetCompID)
-  #   #    or wait 2 seconds whichever comes first
-  #   # 5. Disconnect
-  #   # Error condition
+  test "Unexpected TargetCompID", %{config: cfg} do
+    # 1. Send Reject (session-level) with SessionRejectReason = "CompID problem")
+    # 2. Increment inbound MsgSeqNum
+    # 3. Send Logout message referencing incorrect SenderCompID or TargetCompID value
+    # 4. Optional - Wait for Logout message response (note likely will have incorrect SenderCompID or TargetCompID)
+    #    or wait 2 seconds whichever comes first
+    # 5. Disconnect
+    # Error condition
 
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-  #   msg_seqnum = 11
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
-  #     "52=20170717-17:50:56.123|56=OTHER_BUYSIDE|1=1234|10=$$$|")
-  #   {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+    seq = 11
+    incoming_data = build_message(@msg_type_execution_report, seq, "SELLSIDE", "OTHER_BUYSIDE",
+      @t_plus_1, [{@field_account, "1234"}])
+    session = Session.set_time(session, @t_plus_1)
+    {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
-  #   assert Session.get_status(session) == :disconnecting
+    assert Session.get_status(session) == :disconnecting
 
-  #   assert length(msgs_to_send) == 2
-  #   [reject_msg, logout_msg] = msgs_to_send
+    assert length(msgs_to_send) == 2
+    [reject_msg, logout_msg] = msgs_to_send
 
-  #   assert reject_msg.seqnum == 6
-  #   assert reject_msg.msg_type == @msg_type_reject
-  #   assert reject_msg.sender == "BUYSIDE"
-  #   assert reject_msg.target == "SELLSIDE"
-  #   assert reject_msg.orig_sending_time == @t0
-  #   assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "9"}
-  #   assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "CompID problem"}
+    assert reject_msg.seqnum == 6
+    assert reject_msg.msg_type == @msg_type_reject
+    assert reject_msg.sender == "BUYSIDE"
+    assert reject_msg.target == "SELLSIDE"
+    assert reject_msg.orig_sending_time == @t_plus_1
+    assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "9"}
+    assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "CompID problem"}
 
-  #   assert logout_msg.seqnum == 7
-  #   assert logout_msg.msg_type == @msg_type_logout
-  #   assert logout_msg.sender == "BUYSIDE"
-  #   assert logout_msg.target == "SELLSIDE"
-  #   assert logout_msg.orig_sending_time == @t0
-  #   assert :lists.keyfind("58", 1, logout_msg.body) == {"58", "Incorrect TargetCompID value"}
-  # end
+    assert logout_msg.seqnum == 7
+    assert logout_msg.msg_type == @msg_type_logout
+    assert logout_msg.sender == "BUYSIDE"
+    assert logout_msg.target == "SELLSIDE"
+    assert logout_msg.orig_sending_time == @t_plus_1
+    assert :lists.keyfind("58", 1, logout_msg.body) == {"58", "Incorrect TargetCompID value"}
+  end
 
-  # test "BodyLength value received is not correct (p. 52)", %{config: cfg} do
-  #   # Ignore message - don't increment expected MsgSeqNum
-  #   # Warning condition
+  test "BodyLength value received is not correct (p. 52)", %{config: cfg} do
+    # Ignore message - don't increment expected MsgSeqNum
+    # Warning condition
 
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-  #   msg_seqnum = 11
-  #   incorrect_body_length = 5
-  #   incoming_data = msg("8=FIXT.1.1|9=#{incorrect_body_length}|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
-  #     "52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+    msg_seqnum = 11
+    incorrect_body_length = 5
+    incoming_data = msg("8=FIXT.1.1|9=#{incorrect_body_length}|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
+      "52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|")
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
-  #   assert Session.get_status(session) == :online
+    assert Session.get_status(session) == :online
 
-  #   assert length(msgs_to_send) == 0
-  # end
+    assert length(msgs_to_send) == 0
+  end
 
-  # test "Checksum error (p. 55)", %{config: cfg} do
-  #   # > CheckSum error is not the last field of message, value doesn't have length of 3, or isn't delimited by SOH
-  #   # Ignore message - don't increment expected MsgSeqNum
-  #   # Warning condition
+  test "Checksum error (p. 55)", %{config: cfg} do
+    # > CheckSum error is not the last field of message, value doesn't have length of 3, or isn't delimited by SOH
+    # Ignore message - don't increment expected MsgSeqNum
+    # Warning condition
 
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-  #   msg_seqnum = 11
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
-  #     "52=20170717-17:50:56.123|56=BUYSIDE|10=ERR")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+    msg_seqnum = 11
+    incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
+      "52=20170717-17:50:56.123|56=BUYSIDE|10=ERR")
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
-  #   assert Session.get_status(session) == :online
-  #   assert Session.get_in_lastseq(session) == 10
-  #   assert length(msgs_to_send) == 0
-  # end
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 10
+    assert length(msgs_to_send) == 0
+  end
 
   # test "A Test Request message is received (p. 55)", %{config: cfg} do
   #   # Send Hearbeat message with Test Request message's TestReqID
