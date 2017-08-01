@@ -57,7 +57,7 @@ defmodule ExFix.Session do
   @field_end_seq_no            "16"
   @field_text                  "58"
   @field_session_reject_reason "373"
-  @field_gap_fill_flag         "123"
+  @field_gap_fill              "123"
   @field_new_seq_no            "36"
 
   ##
@@ -111,16 +111,14 @@ defmodule ExFix.Session do
   end
 
   @doc """
-  Utility function for tests: increment current time N seconds
+  Utility function for tests: set out_queue to an arbitrary list of messages
   """
-  def increment_time(%Session{config: config} = session, seconds: seconds) do
-    result = case config do
-      %SessionConfig{time_service: %DateTime{} = v} ->
-        %SessionConfig{config | time_service: Calendar.DateTime.add!(v, seconds)}
-      other ->
-        raise "Error - time_service = #{inspect other} (expected %DateTime{})"
+  def set_out_queue(%Session{out_queue: out_queue} = session, out_queue_messages) do
+    :ets.delete_all_objects(out_queue)
+    for {seq, msg} <- out_queue_messages do
+      :ets.insert(out_queue, {seq, msg})
     end
-    %Session{session | config: result}
+    session
   end
 
   @doc """
@@ -239,7 +237,7 @@ defmodule ExFix.Session do
 
   def process_incoming_message(expected_seqnum, @msg_type_sequence_reset, _session_name,
       session, %Message{seqnum: seqnum, fields: fields} = msg) do
-    gap_fill = :lists.keyfind(@field_gap_fill_flag, 1, fields) == {@field_gap_fill_flag, "Y"}
+    gap_fill = :lists.keyfind(@field_gap_fill, 1, fields) == {@field_gap_fill, "Y"}
     {@field_new_seq_no, new_seq_no_str} = :lists.keyfind(@field_new_seq_no, 1, fields)
     {new_seq_no, _} = Integer.parse(new_seq_no_str)
     if not gap_fill and new_seq_no == seqnum and expected_seqnum == new_seq_no do
@@ -442,7 +440,27 @@ defmodule ExFix.Session do
       v when v > 0 ->
         {:andalso, {:">=", :"$1", begin_seq}, {:"=<", :"$1", end_seq}}
     end
-    :ets.select(out_queue, [{{:"$1", :"$2"}, [guard], [:"$2"]}])
+    spec = [{{:"$1", :"$2"}, [guard], [:"$2"]}]
+    for msg <- :ets.select(out_queue, spec), do: get_message_for_resend(msg.msg_type, msg)
+  end
+
+  defp get_message_for_resend(@msg_type_logon, msg), do: seq_reset_gap_fill(msg)
+  defp get_message_for_resend(@msg_type_heartbeat, msg), do: seq_reset_gap_fill(msg)
+  defp get_message_for_resend(@msg_type_test_request, msg), do: seq_reset_gap_fill(msg)
+  defp get_message_for_resend(@msg_type_resend_request, msg), do: seq_reset_gap_fill(msg)
+  defp get_message_for_resend(@msg_type_reject, msg), do: seq_reset_gap_fill(msg)
+  defp get_message_for_resend(@msg_type_sequence_reset, msg), do: seq_reset_gap_fill(msg)
+  defp get_message_for_resend(@msg_type_logout, msg), do: seq_reset_gap_fill(msg)
+  defp get_message_for_resend(_, msg), do: msg
+
+  defp seq_reset_gap_fill(%MessageToSend{seqnum: seqnum} = msg) do
+    %MessageToSend{msg |
+      msg_type: @msg_type_sequence_reset,
+      extra_header: [],
+      body: [
+        {@field_new_seq_no, seqnum},
+        {@field_gap_fill, true}
+      ]}
   end
 
   defp process_sequence_reset(true = _gap_fill, new_seq_no, seqnum, expected_seqnum, session)

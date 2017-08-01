@@ -12,7 +12,6 @@ defmodule ExFix.SessionWorker do
 
   @compile {:inline, handle_data: 2}
 
-  @session_registry Application.get_env(:ex_fix, :session_registry, ExFix.DefaultSessionRegistry)
   @rx_heartbeat_tolerance Application.get_env(:ex_fix, :rx_heartbeat_tolerance, 1.2)
   @logout_timeout Application.get_env(:ex_fix, :logout_timeout, 2_000)
 
@@ -22,16 +21,17 @@ defmodule ExFix.SessionWorker do
       mode: :initiator,
       transport: nil,
       client: nil,
+      session_registry: nil,
       session: nil,
       log_outgoing_msg: true,
       rx_timer: nil,
       tx_timer: nil
   end
 
-  def start_link(config) do
+  def start_link(config, registry) do
     # name = {:via, ExFix.Registry, {:ex_fix_session, config.name}}
     name = :"ex_fix_session_#{config.name}"
-    GenServer.start_link(__MODULE__, [config], name: name)
+    GenServer.start_link(__MODULE__, [config, registry], name: name)
   end
 
   def send_message(fix_session, msg_type, fields) when is_binary(fix_session) do
@@ -50,12 +50,12 @@ defmodule ExFix.SessionWorker do
   ## GenServer callbacks
   ##
 
-  def init([config]) do
-    Logger.debug fn -> "SessionWorker.init() - config: #{inspect config}" end
-    action = @session_registry.session_on_init(config.name)
+  def init([config, session_registry]) do
+    Logger.warn ">> Starting session worker - SessionRegistry: #{inspect session_registry}"
+    action = session_registry.session_on_init(config.name)
     send(self(), {:init, action, config})
     {:ok, %State{name: config.name, mode: config.mode,
-      log_outgoing_msg: config.log_outgoing_msg}}
+      log_outgoing_msg: config.log_outgoing_msg, session_registry: session_registry}}
   end
 
   def handle_info({:timeout, timer_name}, %State{session: session} = state) do
@@ -113,12 +113,14 @@ defmodule ExFix.SessionWorker do
     {:stop, :normal, state}
   end
 
-  def terminate(:econnrefused, %State{name: fix_session_name} = _state) do
-    @session_registry.session_update_status(fix_session_name, :reconnecting)
+  def terminate(:econnrefused, %State{name: fix_session_name,
+      session_registry: session_registry} = _state) do
+    session_registry.session_update_status(fix_session_name, :reconnecting)
     :ok
   end
-  def terminate(:closed, %State{name: fix_session_name} = _state) do
-    @session_registry.session_update_status(fix_session_name, :reconnecting)
+  def terminate(:closed, %State{name: fix_session_name,
+      session_registry: session_registry} = _state) do
+    session_registry.session_update_status(fix_session_name, :reconnecting)
     :ok
   end
   def terminate(_reason, _state), do: :ok
@@ -131,8 +133,10 @@ defmodule ExFix.SessionWorker do
     case Session.handle_incoming_data(session, data) do
       {:ok, [], session2} ->
         rx_timer = case rx_timer do
-          nil -> setup_rx_timer(session)
-          value -> value
+          nil ->
+            setup_rx_timer(state.session_registry, session)
+          value ->
+            value
         end
         send(rx_timer, :msg)
         {:noreply, %State{state | session: session2, rx_timer: rx_timer}}
@@ -192,10 +196,11 @@ defmodule ExFix.SessionWorker do
     end
   end
 
-  defp setup_rx_timer(%Session{config: %SessionConfig{name: name, heart_bt_int: heart_bt_int}}) do
+  defp setup_rx_timer(session_registry, %Session{config: config}) do
+    %SessionConfig{name: name, heart_bt_int: heart_bt_int} = config
     interval = round(heart_bt_int * 1_000 * @rx_heartbeat_tolerance)
     rx_timer = SessionTimer.setup_timer(:rx, interval)
-    @session_registry.session_update_status(name, :connected)
+    session_registry.session_update_status(name, :connected)
     rx_timer
   end
 end

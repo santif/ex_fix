@@ -58,10 +58,85 @@ defmodule ExFix.TestHelper do
     end
   end
 
+  defmodule TestSessionRegistry do
+    @moduledoc """
+    Session registry for tests
+    """
+
+    @behaviour ExFix.SessionRegistry
+    use GenServer
+
+    ##
+    ## API
+    ##
+
+    def start_link do
+      GenServer.start_link(__MODULE__, [], name: __MODULE__)
+    end
+
+    def get_session_status(session_name) do
+      GenServer.call(__MODULE__, {:get_status, session_name})
+    end
+
+    def start_session(session_name, config) do
+      GenServer.call(__MODULE__, {:start_session, session_name})
+      {:ok, _} = Supervisor.start_child(ExFix.SessionSup, [config, __MODULE__])
+      :ok
+    end
+
+    def stop_session(session_name) do
+      GenServer.call(__MODULE__, {:stop_session, session_name})
+    end
+
+    ##
+    ## Internal API (functions to use from FIX session genservers)
+    ##
+
+    def session_on_init(session_name) do
+      GenServer.call(__MODULE__, {:session_on_init, session_name})
+    end
+
+    def session_update_status(session_name, status) do
+      GenServer.call(__MODULE__, {:session_update_status, session_name, status})
+    end
+
+    ##
+    ## GenServer callbacks
+    ##
+
+    def init([]) do
+      IO.puts "Starting TestSessionRegistry: #{inspect self()}"
+      {:ok, %{}}
+    end
+
+    def handle_call({:get_status, fix_session_name}, _from, state) do
+      {:reply, state[fix_session_name] || :connecting, state}
+    end
+    def handle_call({:start_session, fix_session_name}, _from, state) do
+      state = Map.put(state, fix_session_name, :connecting)
+      {:reply, :ok, state}
+    end
+    def handle_call({:stop_session, fix_session_name}, _from, state) do
+      state = Map.delete(state, fix_session_name)
+      {:reply, :ok, state}
+    end
+    def handle_call({:session_on_init, fix_session_name}, _from, state) do
+      IO.puts ">> session_on_init() -> #{fix_session_name}"
+      state = Map.put(state, fix_session_name, :connected)
+      {:reply, :ok, state}
+    end
+    def handle_call({:session_update_status, fix_session_name, status}, _from, state) do
+      IO.puts ">> ession_update_status() -> #{fix_session_name}, #{status}"
+      state = Map.put(state, fix_session_name, status)
+      {:reply, :ok, state}
+    end
+  end
+
   @doc """
   Builds test message
   """
-  def build_message(msg_type, seqnum, sender, target, now, fields \\ [], orig_sending_time \\ nil, resend \\ false) do
+  def build_message(msg_type, seqnum, sender, target, now, fields \\ [],
+      orig_sending_time \\ nil, resend \\ false) do
     fields = for {field_name, value} <- fields do
       {field, _} = Dictionary.tag_info(field_name)
       {field, value}

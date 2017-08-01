@@ -442,9 +442,25 @@ defmodule ExFix.SessionTest do
     session = Session.set_time(session, @t_plus_1)
     {:resend, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
-    assert length(msgs_to_send) == 4  ## FIXME 3!
     assert Session.get_status(session) == :online
-    ## TODO asserts
+    assert Session.get_in_lastseq(session) == 2
+
+    assert length(msgs_to_send) == 4
+    [msg1, msg2, msg3, msg4] = msgs_to_send
+
+    assert msg1.msg_type == @msg_type_new_order_single
+    assert msg1.seqnum == 2
+
+    assert msg2.msg_type == @msg_type_new_order_single
+    assert msg2.seqnum == 3
+
+    assert msg3.msg_type == @msg_type_sequence_reset
+    assert msg3.seqnum == 4
+    {_, true} = :lists.keyfind("#{@field_gap_fill}", 1, msg3.body)
+    {_, 4} = :lists.keyfind("#{@field_new_seq_no}", 1, msg3.body)
+
+    assert msg4.msg_type == @msg_type_new_order_single
+    assert msg4.seqnum == 5
   end
 
   test "SeqResetGapFill with NewSeqNo>MsgSeqNum AND MsgSeqNum>Expected (p. 56)", %{config: cfg} do
@@ -708,5 +724,70 @@ defmodule ExFix.SessionTest do
     assert logout.msg_type == @msg_type_logout
     assert logout.sender == "BUYSIDE"
     assert logout.target == "SELLSIDE"
+  end
+
+  test "Resend messages: replace administrative messages with Sequence Reset messages (1)", %{config: cfg} do
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    out_messages = [{1, %MessageToSend{seqnum: 1, msg_type: @msg_type_logon,
+      sender: "BUYSIDE", target: "SELLSIDE", orig_sending_time: @t0, body: []}}]
+    session = Session.set_out_queue(session, out_messages)
+
+    seq = 11
+    incoming_data = build_message(@msg_type_resend_request, seq, "SELLSIDE", "BUYSIDE", @t_plus_1,
+      [{@field_begin_seq_no, 1}, {@field_end_seq_no, 0}])
+    session = Session.set_time(session, @t_plus_1)
+    {:resend, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 11
+
+    assert length(msgs_to_send) == 1
+    [msg] = msgs_to_send
+
+    assert msg.msg_type == @msg_type_sequence_reset
+    assert msg.seqnum == 1
+  end
+
+  test "Resend messages: replace administrative messages with Sequence Reset messages (2)", %{config: cfg} do
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 8}
+
+    msg = %MessageToSend{sender: "BUYSIDE", target: "SELLSIDE", orig_sending_time: @t0, body: []}
+    out_messages = [
+      {3, %MessageToSend{seqnum: 3, msg_type: @msg_type_heartbeat}},
+      {4, %MessageToSend{seqnum: 4, msg_type: @msg_type_reject}},
+      {5, %MessageToSend{seqnum: 5, msg_type: @msg_type_test_request}},
+      {6, %MessageToSend{seqnum: 6, msg_type: @msg_type_sequence_reset}},
+      {7, %MessageToSend{seqnum: 7, msg_type: @msg_type_resend_request}},
+      {8, %MessageToSend{seqnum: 8, msg_type: @msg_type_logout}},
+    ]
+    session = Session.set_out_queue(session, out_messages)
+
+    seq = 11
+    incoming_data = build_message(@msg_type_resend_request, seq, "SELLSIDE", "BUYSIDE", @t_plus_1,
+      [{@field_begin_seq_no, 3}, {@field_end_seq_no, 0}])
+    session = Session.set_time(session, @t_plus_1)
+    {:resend, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 11
+
+    assert length(msgs_to_send) == 6
+    [msg3, msg4, msg5, msg6, msg7, msg8] = msgs_to_send
+
+    assert msg3.msg_type == @msg_type_sequence_reset
+    assert msg3.seqnum == 3
+    assert msg4.msg_type == @msg_type_sequence_reset
+    assert msg4.seqnum == 4
+    assert msg5.msg_type == @msg_type_sequence_reset
+    assert msg5.seqnum == 5
+    assert msg6.msg_type == @msg_type_sequence_reset
+    assert msg6.seqnum == 6
+    assert msg7.msg_type == @msg_type_sequence_reset
+    assert msg7.seqnum == 7
+    assert msg8.msg_type == @msg_type_sequence_reset
+    assert msg8.seqnum == 8
   end
 end

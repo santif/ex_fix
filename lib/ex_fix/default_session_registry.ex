@@ -32,7 +32,7 @@ defmodule ExFix.DefaultSessionRegistry do
 
   def start_session(fix_session_name, config) do
     :ets.insert(@ets_table, {fix_session_name, :connecting})
-    {:ok, _} = Supervisor.start_child(ExFix.SessionSup, [config])
+    {:ok, _} = Supervisor.start_child(ExFix.SessionSup, [config, __MODULE__])
     :ok
   end
 

@@ -71,7 +71,8 @@ defmodule ExFix do
       fix_application: fix_application,
       dictionary: @default_dictionary,
     }, opts)
-    @session_registry.start_session(session_name, config)
+    session_registry = opts[:session_registry] || @session_registry
+    session_registry.start_session(session_name, config)
   end
 
   @doc """
@@ -85,7 +86,8 @@ defmodule ExFix do
   @doc """
   Stop FIX session
   """
-  def stop_session(session_name) do
-    @session_registry.stop_session(session_name)
+  def stop_session(session_name, registry \\ nil) do
+    session_registry = registry || @session_registry
+    session_registry.stop_session(session_name)
   end
 end
