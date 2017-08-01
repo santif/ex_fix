@@ -30,7 +30,8 @@ defmodule ExFix.SessionTest do
   setup do
     config = %SessionConfig{name: "test", mode: :initiator, sender_comp_id: "BUYSIDE",
       target_comp_id: "SELLSIDE", logon_username: "testuser", logon_password: "testpwd",
-      fix_application: FixDummyApplication, dictionary: ExFix.DefaultDictionary}
+      fix_application: FixDummyApplication, dictionary: ExFix.DefaultDictionary,
+      time_service: @t0}
     {:ok, config: config}
   end
 
@@ -111,49 +112,52 @@ defmodule ExFix.SessionTest do
       {"58", "MsgSeqNum too low, expecting 11 but received 9"}
   end
 
-  # test "Garbled message received - 1 (p. 49)", %{config: cfg} do
-  #   # Ignore message - don't increment expected MsgSeqNum
-  #   # Warning condition
+  test "Garbled message received - 1 (p. 49)", %{config: cfg} do
+    # Ignore message - don't increment expected MsgSeqNum
+    # Warning condition
 
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|garbled|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+    incoming_data = msg("8=FIXT.1.1|9=$$$|garbled|10=$$$|")
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
-  #   assert Session.get_status(session) == :online
-  #   assert length(msgs_to_send) == 0
-  # end
+    assert Session.get_status(session) == :online
+    assert length(msgs_to_send) == 0
+  end
 
-  # test "Garbled message received - 2 (p. 49)", %{config: cfg} do
-  #   # Ignore message - don't increment expected MsgSeqNum
-  #   # Warning condition
+  test "Garbled message received - 2 (p. 49)", %{config: cfg} do
+    # Ignore message - don't increment expected MsgSeqNum
+    # Warning condition
 
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-  #   incoming_data = msg("garbled_garbled_garbled_garbled_garbled")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+    incoming_data = msg("garbled_garbled_garbled_garbled_garbled")
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
-  #   assert Session.get_status(session) == :online
-  #   assert length(msgs_to_send) == 0
-  # end
+    assert Session.get_status(session) == :online
+    assert length(msgs_to_send) == 0
+  end
 
-  # test "PossDupFlag=Y, OrigSendingTime<=SendingTime and MsgSeqNum<Expected (p. 50)", %{config: cfg} do
-  #   # 1. Check to see if MsgSeqNum has already been received.
-  #   # 2. If already received then ignore the message, otherwise accept and process the message.
+  test "PossDupFlag=Y, OrigSendingTime<=SendingTime and MsgSeqNum<Expected (p. 50)", %{config: cfg} do
+    # 1. Check to see if MsgSeqNum has already been received.
+    # 2. If already received then ignore the message, otherwise accept and process the message.
 
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-  #   msg_seqnum = 9
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
-  #     "43=Y|52=20170717-17:50:56.123|122=20170717-17:49:00.000|56=BUYSIDE|1=1234|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+    seq = 9
+    resend = true
+    orig_sending_time = @t0
+    incoming_data = build_message(@msg_type_execution_report, seq, "SELLSIDE", "BUYSIDE",
+      @t_plus_1, [{@field_account, "1234"}], orig_sending_time, resend)
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
-  #   assert Session.get_status(session) == :online
-  #   assert length(msgs_to_send) == 0
-  # end
+    assert Session.get_status(session) == :online
+    assert length(msgs_to_send) == 0
+  end
 
   # test "PossDupFlag=Y, OrigSendingTime > SendingTime and MsgSeqNum=Expected (p. 50)", %{config: cfg} do
   #   # 1. Send Reject (session-level) message referencing inaccurate SendingTime: "SendingTime acccuracy problem")
