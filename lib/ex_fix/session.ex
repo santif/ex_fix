@@ -104,6 +104,26 @@ defmodule ExFix.Session do
   def get_last_test_req_id(%Session{last_test_req_id_sent: value}), do: value
 
   @doc """
+  Utility function for tests: simulates a certain point in time
+  """
+  def set_time(%Session{config: config} = session, date_time) do
+    %Session{session | config: %SessionConfig{config | time_service: date_time}}
+  end
+
+  @doc """
+  Utility function for tests: increment current time N seconds
+  """
+  def increment_time(%Session{config: config} = session, seconds: seconds) do
+    result = case config do
+      %SessionConfig{time_service: %DateTime{} = v} ->
+        %SessionConfig{config | time_service: Calendar.DateTime.add!(v, seconds)}
+      other ->
+        raise "Error - time_service = #{inspect other} (expected %DateTime{})"
+    end
+    %Session{session | config: result}
+  end
+
+  @doc """
   Session start: send Logon msg
   """
   @spec session_start(Session.t) :: T.session_result
@@ -395,6 +415,7 @@ defmodule ExFix.Session do
     orig_sending_time = case time_service do
       nil -> DateTime.utc_now()
       {m, f, a} -> :erlang.apply(m, f, a)
+      %DateTime{} = v -> v
     end
     %MessageToSend{
       seqnum: seqnum, msg_type: msg_type, sender: sender,

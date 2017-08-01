@@ -18,8 +18,6 @@ defmodule ExFix.TestHelper do
     end
 
     def on_logout(_fix_session), do: :ok
-
-    def now(date_time), do: date_time
   end
 
   defmodule FixEmptyApplication do

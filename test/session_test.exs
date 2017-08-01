@@ -30,13 +30,13 @@ defmodule ExFix.SessionTest do
   setup do
     config = %SessionConfig{name: "test", mode: :initiator, sender_comp_id: "BUYSIDE",
       target_comp_id: "SELLSIDE", logon_username: "testuser", logon_password: "testpwd",
-      fix_application: FixDummyApplication, dictionary: ExFix.DefaultDictionary,
-      time_service: {FixDummyApplication, :now, [@t0]}}
+      fix_application: FixDummyApplication, dictionary: ExFix.DefaultDictionary}
     {:ok, config: config}
   end
 
   test "FIX session logon", %{config: cfg} do
     {:ok, session} = Session.init(cfg)
+    session = Session.set_time(session, @t0)
 
     assert Session.get_status(session) == :offline
 
@@ -52,7 +52,7 @@ defmodule ExFix.SessionTest do
     incoming_data = build_message(@msg_type_logon, 1, "SELLSIDE", "BUYSIDE",
       @t_plus_1, [{"Username", "testuser"}, {"Password", "testpwd"}, {"EncryptMethod", "0"},
         {"HeartBtInt", 120}, {"ResetSeqNumFlag", true}, {"DefaultApplVerID", "9"}])
-
+    session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
@@ -62,17 +62,16 @@ defmodule ExFix.SessionTest do
   test "Message received with MsgSeqNum higher than expected (p. 49)", %{config: cfg} do
     # Respond with Resend Message
 
-    cfg = %SessionConfig{cfg | time_service: {FixDummyApplication, :now, [@t_plus_2]}}
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
     incoming_data = build_message(@msg_type_new_order_single, 12, "SELLSIDE", "BUYSIDE",
       @t_plus_1, [{@field_account, "1234"}])
-
+    session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert msgs_to_send == [%MessageToSend{seqnum: 6, msg_type: @msg_type_resend_request,
-      sender: "BUYSIDE", orig_sending_time: @t_plus_2, target: "SELLSIDE",
+      sender: "BUYSIDE", orig_sending_time: @t_plus_1, target: "SELLSIDE",
       body: [{"7", 11}, {"16", 11}]}]
 
     assert Session.get_in_queue_length(session) == 1
@@ -89,12 +88,13 @@ defmodule ExFix.SessionTest do
     # Respond with Logout with "MsgSeqNum too low, expecting X but received Y" (optional - wait for response)
     # Disconnect
 
-    cfg = %SessionConfig{cfg | time_service: {FixDummyApplication, :now, [@t_plus_2]}}
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-    incoming_data = build_message(@msg_type_execution_report, 9, "SELLSIDE", "BUYSIDE",
+    seq = 9
+    incoming_data = build_message(@msg_type_execution_report, seq, "SELLSIDE", "BUYSIDE",
       @t_plus_1, [{@field_account, "1234"}])
+    session = Session.set_time(session, @t_plus_1)
     {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :disconnecting
@@ -106,7 +106,7 @@ defmodule ExFix.SessionTest do
     assert logout.msg_type == @msg_type_logout
     assert logout.sender == "BUYSIDE"
     assert logout.target == "SELLSIDE"
-    assert logout.orig_sending_time == @t_plus_2
+    assert logout.orig_sending_time == @t_plus_1
     assert :lists.keyfind("58", 1, logout.body) ==
       {"58", "MsgSeqNum too low, expecting 11 but received 9"}
   end
