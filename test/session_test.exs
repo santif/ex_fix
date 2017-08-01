@@ -133,7 +133,7 @@ defmodule ExFix.SessionTest do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-    incoming_data = msg("garbled_garbled_garbled_garbled_garbled")
+    incoming_data = "garbled_garbled_garbled_garbled_garbled"
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
@@ -159,60 +159,66 @@ defmodule ExFix.SessionTest do
     assert length(msgs_to_send) == 0
   end
 
-  # test "PossDupFlag=Y, OrigSendingTime > SendingTime and MsgSeqNum=Expected (p. 50)", %{config: cfg} do
-  #   # 1. Send Reject (session-level) message referencing inaccurate SendingTime: "SendingTime acccuracy problem")
-  #   # 2. Increment inbound MsgSeqNum
-  #   # 3. Optional flow - send Logout - p. 50
+  test "PossDupFlag=Y, OrigSendingTime > SendingTime and MsgSeqNum=Expected (p. 50)", %{config: cfg} do
+    # 1. Send Reject (session-level) message referencing inaccurate SendingTime: "SendingTime acccuracy problem")
+    # 2. Increment inbound MsgSeqNum
+    # 3. Optional flow - send Logout - p. 50
 
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-  #   msg_seqnum = 11
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
-  #     "43=Y|52=20170717-17:50:56.123|122=20170717-17:51:00.000|56=BUYSIDE|1=1234|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+    seq = 11
+    resend = true
+    orig_sending_time = @t_plus_2
+    incoming_data = build_message(@msg_type_execution_report, seq, "SELLSIDE", "BUYSIDE",
+      @t_plus_1, [{@field_account, "1234"}], orig_sending_time, resend)
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
-  #   assert Session.get_status(session) == :online
-  #   assert Session.get_in_lastseq(session) == 11
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 11
 
-  #   assert length(msgs_to_send) == 1
-  #   [reject_msg] = msgs_to_send
+    assert length(msgs_to_send) == 1
+    [reject_msg] = msgs_to_send
 
-  #   assert reject_msg.seqnum == 6
-  #   assert reject_msg.msg_type == @msg_type_reject
-  #   assert reject_msg.sender == "BUYSIDE"
-  #   assert reject_msg.target == "SELLSIDE"
-  #   assert reject_msg.orig_sending_time == @t0
-  #   assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "10"}
-  #   assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "SendingTime acccuracy problem"}
-  # end
+    assert reject_msg.seqnum == 6
+    assert reject_msg.msg_type == @msg_type_reject
+    assert reject_msg.sender == "BUYSIDE"
+    assert reject_msg.target == "SELLSIDE"
+    assert reject_msg.orig_sending_time == @t_plus_1
+    assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "10"}
+    assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "SendingTime acccuracy problem"}
+  end
 
-  # test "PossDupFlag=Y and OrigSendingTime not specified (p. 51)", %{config: cfg} do
-  #   # 1. Send Reject (session-level) with SessionRejectReason = "Required tag missing")
-  #   # 2. Increment inbound MsgSeqNum
+  test "PossDupFlag=Y and OrigSendingTime not specified (p. 51)", %{config: cfg} do
+    # 1. Send Reject (session-level) with SessionRejectReason = "Required tag missing")
+    # 2. Increment inbound MsgSeqNum
 
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-  #   msg_seqnum = 11
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
-  #     "43=Y|52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+    msg_seqnum = 11
+    poss_dup_flag = "Y"
+    ## TODO replace all hardcoded datetimes with DateUtil.serialize_date
+    incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
+      "43=#{poss_dup_flag}|52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|")
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
-  #   assert Session.get_status(session) == :online
-  #   assert Session.get_in_lastseq(session) == 11
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 11
 
-  #   assert length(msgs_to_send) == 1
-  #   [reject_msg] = msgs_to_send
+    assert length(msgs_to_send) == 1
+    [reject_msg] = msgs_to_send
 
-  #   assert reject_msg.seqnum == 6
-  #   assert reject_msg.msg_type == @msg_type_reject
-  #   assert reject_msg.sender == "BUYSIDE"
-  #   assert reject_msg.target == "SELLSIDE"
-  #   assert reject_msg.orig_sending_time == @t0
-  #   assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "1"}
-  #   assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "Required tag missing: OrigSendingTime"}
-  # end
+    assert reject_msg.seqnum == 6
+    assert reject_msg.msg_type == @msg_type_reject
+    assert reject_msg.sender == "BUYSIDE"
+    assert reject_msg.target == "SELLSIDE"
+    assert reject_msg.orig_sending_time == @t_plus_1
+    assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "1"}
+    assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "Required tag missing: OrigSendingTime"}
+  end
 
   # test "BeginString value received did not match value expected (p. 51)", %{config: cfg} do
   #   # 1. Send Logout message referencing incorrect BeginString value
