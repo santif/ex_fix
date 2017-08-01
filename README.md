@@ -43,7 +43,6 @@ defmodule MyFixApplication do
     Logger.info "Msg received: #{inspect Parser.parse2(msg)}"
   end
 
-  def before_logon(_fix_session_name, _fields), do: :ok
   def on_logout(_fix_session_name), do: :ok
 end
 

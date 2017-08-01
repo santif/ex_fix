@@ -327,8 +327,8 @@ defmodule ExFix.SessionTest do
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
     msg_seqnum = 11
-    incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=BUYSIDE|" <>
-      "52=20170717-17:50:56.123|56=SELLSIDE|10=ERR")
+    incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
+      "52=20170717-17:50:56.123|56=BUYSIDE|10=ERR")
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
@@ -344,8 +344,8 @@ defmodule ExFix.SessionTest do
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
     msg_seqnum = 11
-    incoming_data = msg("8=FIXT.1.1|9=$$$|35=1|34=#{msg_seqnum}|49=BUYSIDE|" <>
-      "52=20170717-17:50:56.123|56=SELLSIDE|10=$$$|")
+    incoming_data = msg("8=FIXT.1.1|9=$$$|35=1|34=#{msg_seqnum}|49=SELLSIDE|" <>
+      "52=20170717-17:50:56.123|56=BUYSIDE|10=$$$|")
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
@@ -430,7 +430,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 13
     tag_new_seq_no = "36"
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|34=#{msg_seqnum}|" <>
-      "49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|#{tag_new_seq_no}=14|" <>
+      "49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|#{tag_new_seq_no}=14|" <>
       "123=Y|10=$$$|")
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -462,7 +462,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     tag_new_seq_no = "36"
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|34=#{msg_seqnum}|" <>
-      "49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|#{tag_new_seq_no}=14|" <>
+      "49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|#{tag_new_seq_no}=14|" <>
       "123=Y|10=$$$|")
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -481,7 +481,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 9
     tag_new_seq_no = "36"
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|34=#{msg_seqnum}|" <>
-      "49=BUYSIDE|43=Y|52=20170717-17:50:56.123|56=SELLSIDE|#{tag_new_seq_no}=14|" <>
+      "49=SELLSIDE|43=Y|52=20170717-17:50:56.123|56=BUYSIDE|#{tag_new_seq_no}=14|" <>
       "123=Y|10=$$$|")
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -504,7 +504,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 9
     tag_new_seq_no = "36"
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|34=#{msg_seqnum}|" <>
-      "49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|#{tag_new_seq_no}=14|" <>
+      "49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|#{tag_new_seq_no}=14|" <>
       "123=Y|10=$$$|")
     {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -531,7 +531,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     tag_new_seq_no = "36"
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|" <>
-      "34=#{msg_seqnum}|49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|" <>
+      "34=#{msg_seqnum}|49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|" <>
       "#{tag_new_seq_no}=10|123=Y|10=$$$|")
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -560,7 +560,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     tag_new_seq_no = "36"
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|" <>
-      "34=#{msg_seqnum}|49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|" <>
+      "34=#{msg_seqnum}|49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|" <>
       "#{tag_new_seq_no}=15|10=$$$|")
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -579,7 +579,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     tag_new_seq_no = "36"
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|" <>
-      "34=#{msg_seqnum}|49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|" <>
+      "34=#{msg_seqnum}|49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|" <>
       "#{tag_new_seq_no}=11|10=$$$|")
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -601,7 +601,7 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     tag_new_seq_no = "36"
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|" <>
-      "34=#{msg_seqnum}|49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|" <>
+      "34=#{msg_seqnum}|49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|" <>
       "#{tag_new_seq_no}=9|10=$$$|")
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -649,7 +649,7 @@ defmodule ExFix.SessionTest do
 
     msg_seqnum = 11
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_logout}|" <>
-      "34=#{msg_seqnum}|49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|10=$$$|")
+      "34=#{msg_seqnum}|49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|10=$$$|")
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :offline
@@ -665,7 +665,7 @@ defmodule ExFix.SessionTest do
 
     msg_seqnum = 11
     incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_logout}|" <>
-      "34=#{msg_seqnum}|49=BUYSIDE|52=20170717-17:50:56.123|56=SELLSIDE|10=$$$|")
+      "34=#{msg_seqnum}|49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|10=$$$|")
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :disconnecting

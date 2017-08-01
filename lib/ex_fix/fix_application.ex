@@ -4,13 +4,6 @@ defmodule ExFix.FixApplication do
   """
 
   alias ExFix.Types.Message
-  alias ExFix.Types, as: T
-
-  @doc """
-  Callback to customize logon message
-  """
-  @callback before_logon(session_name :: String.t, fields :: [T.fix_field]) ::
-    :ok | {:ok, [T.fix_field]} | :stop
 
   @doc """
   Logon callback

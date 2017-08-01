@@ -109,14 +109,12 @@ defmodule ExFix.Session do
   @spec session_start(Session.t) :: T.session_result
   def session_start(%Session{config: config, out_lastseq: lastseq} = session) do
     %SessionConfig{
-      name: fix_session_name,
       logon_encrypt_method: logon_encrypt_method,
       heart_bt_int: heart_bt_int,
       reset_on_logon: reset_on_logon,
       logon_username: logon_username,
       logon_password: logon_password,
-      default_applverid: default_applverid,
-      fix_application: fix_application
+      default_applverid: default_applverid
     } = config
     seqnum = lastseq + 1
     fields = [{@field_logon_encrypt_method, logon_encrypt_method},
@@ -125,16 +123,8 @@ defmodule ExFix.Session do
               {@field_logon_username, logon_username},
               {@field_logon_password, logon_password},
               {@field_default_applverid, default_applverid}]
-    case fix_application.before_logon(fix_session_name, fields) do
-      :ok ->
-        logon_msg = build_message(config, @msg_type_logon, seqnum, fields)
-        {:ok, [logon_msg], %Session{session | status: :connecting, out_lastseq: seqnum}}
-      {:ok, fields2} ->
-        logon_msg = build_message(config, @msg_type_logon, seqnum, fields2)
-        {:ok, [logon_msg], %Session{session | status: :connecting, out_lastseq: seqnum}}
-      :stop
-        {:stop, session}
-    end
+    logon_msg = build_message(config, @msg_type_logon, seqnum, fields)
+    {:ok, [logon_msg], %Session{session | status: :connecting, out_lastseq: seqnum}}
   end
 
   @doc """

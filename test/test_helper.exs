@@ -4,7 +4,6 @@ defmodule ExFix.TestHelper do
 
   defmodule FixDummyApplication do
     @behaviour ExFix.FixApplication
-    def before_logon(_fix_session, _fields), do: :ok
     def on_logon(fix_session, pid) do
       send(pid, {:logon, fix_session})
     end
@@ -20,7 +19,6 @@ defmodule ExFix.TestHelper do
 
   defmodule FixEmptyApplication do
     @behaviour ExFix.FixApplication
-    def before_logon(_fix_session, _fields), do: :ok
     def on_logon(_fix_session, _pid) do
     end
     def on_message(_fix_session, _msg_type, _pid, _msg) do

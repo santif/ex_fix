@@ -24,7 +24,6 @@ defmodule ExFix do
       Logger.info "Msg received: \#{inspect msg = Parser.parse2(msg)}"
     end
 
-    def before_logon(_fix_session_name, _fields), do: :ok
     def on_logout(_fix_session_name), do: :ok
   end
 
