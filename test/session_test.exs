@@ -22,6 +22,10 @@ defmodule ExFix.SessionTest do
   # App fields used in tests
   @field_account 1
   @field_last_px 31
+  @field_begin_seq_no 7
+  @field_end_seq_no 16
+  @field_new_seq_no 36
+  @field_gap_fill 123
 
   @t0        Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 2}}, "Etc/UTC")
   @t_plus_1  Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 3}}, "Etc/UTC")
@@ -362,346 +366,347 @@ defmodule ExFix.SessionTest do
     assert length(msgs_to_send) == 0
   end
 
-  # test "A Test Request message is received (p. 55)", %{config: cfg} do
-  #   # Send Hearbeat message with Test Request message's TestReqID
-  #   # Warning condition
+  test "A Test Request message is received (p. 55)", %{config: cfg} do
+    # Send Hearbeat message with Test Request message's TestReqID
+    # Warning condition
 
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-  #   msg_seqnum = 11
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=1|34=#{msg_seqnum}|49=SELLSIDE|" <>
-  #     "52=20170717-17:50:56.123|56=BUYSIDE|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+    seq = 11
+    incoming_data = build_message(@msg_type_test_request, seq, "SELLSIDE", "BUYSIDE", @t_plus_1)
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
-  #   assert Session.get_status(session) == :online
+    assert Session.get_status(session) == :online
 
-  #   assert length(msgs_to_send) == 1
-  #   [hb_msg] = msgs_to_send
+    assert length(msgs_to_send) == 1
+    [hb_msg] = msgs_to_send
 
-  #   assert hb_msg.seqnum == 6
-  #   assert hb_msg.msg_type == @msg_type_heartbeat
-  #   assert hb_msg.sender == "BUYSIDE"
-  #   assert hb_msg.target == "SELLSIDE"
-  #   assert hb_msg.orig_sending_time == @t0
-  # end
+    assert hb_msg.seqnum == 6
+    assert hb_msg.msg_type == @msg_type_heartbeat
+    assert hb_msg.sender == "BUYSIDE"
+    assert hb_msg.target == "SELLSIDE"
+    assert hb_msg.orig_sending_time == @t_plus_1
+  end
 
-  # test "No data received during (HeartBeatInt field + 20%) interval (p. 55)", %{config: cfg} do
-  #   # Send Test Request message
-  #   # Track and verify that a Heartbeat with the same TestReqID is received (may not be the next message received)
+  test "No data received during (HeartBeatInt field + 20%) interval (p. 55)", %{config: cfg} do
+    # Send Test Request message
+    # Track and verify that a Heartbeat with the same TestReqID is received (may not be the next message received)
 
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-  #   {:ok, msgs_to_send, session} = Session.handle_timeout(session, :rx)
+    {:ok, msgs_to_send, session} = Session.handle_timeout(session, :rx)
 
-  #   assert Session.get_status(session) == :online
+    assert Session.get_status(session) == :online
 
-  #   assert length(msgs_to_send) == 1
-  #   [test_msg] = msgs_to_send
+    assert length(msgs_to_send) == 1
+    [test_msg] = msgs_to_send
 
-  #   assert test_msg.seqnum == 6
-  #   assert test_msg.msg_type == @msg_type_test_request
-  #   assert test_msg.sender == "BUYSIDE"
-  #   assert test_msg.target == "SELLSIDE"
-  #   assert test_msg.orig_sending_time == @t0
-  #   {"112", test_req_id} = :lists.keyfind("112", 1, test_msg.body)
+    assert test_msg.seqnum == 6
+    assert test_msg.msg_type == @msg_type_test_request
+    assert test_msg.sender == "BUYSIDE"
+    assert test_msg.target == "SELLSIDE"
+    assert test_msg.orig_sending_time == @t0
+    {"112", test_req_id} = :lists.keyfind("112", 1, test_msg.body)
 
-  #   assert Session.get_last_test_req_id(session) == test_req_id
+    assert Session.get_last_test_req_id(session) == test_req_id
 
-  #   {:logout, [logout_msg], session} = Session.handle_timeout(session, :rx)
+    {:logout, [logout_msg], session} = Session.handle_timeout(session, :rx)
 
-  #   assert Session.get_status(session) == :disconnecting
-  #   assert logout_msg.seqnum == 7
-  #   assert logout_msg.msg_type == @msg_type_logout
+    assert Session.get_status(session) == :disconnecting
+    assert logout_msg.seqnum == 7
+    assert logout_msg.msg_type == @msg_type_logout
 
-  #   assert Session.get_last_test_req_id(session) == nil
-  # end
+    assert Session.get_last_test_req_id(session) == nil
+  end
 
-  # test "Valid Resend Request (p. 55)", %{config: cfg} do
-  #   ## Respond with application level messages and SequenceReset-Gap-Fill for admin messages requested
-  #   ## range according to "Message Recovery rules"
+  test "Valid Resend Request (p. 55)", %{config: cfg} do
+    ## Respond with application level messages and SequenceReset-Gap-Fill for admin messages requested
+    ## range according to "Message Recovery rules"
 
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 1, out_lastseq: 1}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 1, out_lastseq: 1}
 
-  #   {:ok, _, session} = Session.send_message(session, "D",
-  #     [{"1", 100}, {"55", "Symbol1"}, {"44", 4.56}]) # seqnum 2
-  #   {:ok, _, session} = Session.send_message(session, "D",
-  #     [{"1", 101}, {"55", "Symbol1"}, {"44", 4.56}]) # seqnum 3
-  #   {:ok, _, session} = Session.send_message(session, "0",
-  #     []) # seqnum 4 (heartbeat)
-  #   {:ok, _, session} = Session.send_message(session, "D",
-  #     [{"1", 103}, {"55", "Symbol1"}, {"44", 4.56}]) # seqnum 5
-
-  #   msg_seqnum = 2
-  #   tag_begin_seq_no = "7"
-  #   tag_end_seq_no = "16"
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=2|34=#{msg_seqnum}|49=BUYSIDE|" <>
-  #     "52=20170717-17:50:56.123|56=SELLSIDE|#{tag_begin_seq_no}=2|#{tag_end_seq_no}=4|10=$$$|")
-
-  #   {:resend, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
-
-  #   assert length(msgs_to_send) == 3
-  #   assert Session.get_status(session) == :online
-  #   ## TODO asserts
-  # end
-
-  # test "SeqResetGapFill with NewSeqNo>MsgSeqNum AND MsgSeqNum>Expected (p. 56)", %{config: cfg} do
-  #   ## Issue Resend Request to fill gap between last expected MsgSeqNum and received MsgSeqNum
-
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
-
-  #   msg_seqnum = 13
-  #   tag_new_seq_no = "36"
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|34=#{msg_seqnum}|" <>
-  #     "49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|#{tag_new_seq_no}=14|" <>
-  #     "123=Y|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
-
-  #   assert Session.get_status(session) == :online
-  #   assert Session.get_in_lastseq(session) == 10
-
-  #   assert length(msgs_to_send) == 1
-  #   [resend_req] = msgs_to_send
-
-  #   assert resend_req.seqnum == 6
-  #   assert resend_req.msg_type == @msg_type_resend_request
-  #   {"7", 11} = :lists.keyfind("7", 1, resend_req.body)
-  #   {"16", 12} = :lists.keyfind("16", 1, resend_req.body)
-
-  #   assert Session.get_in_queue_length(session) == 1
-  #   [queued_message] = Session.get_in_queue(session)
-
-  #   assert queued_message.valid == true
-  #   assert queued_message.seqnum == 13
-  #   assert queued_message.msg_type == @msg_type_sequence_reset
-  # end
-
-  # test "SeqResetGapFill with NewSeqNo>MsgSeqNum AND MsgSeqNum=Expected (p. 56)", %{config: cfg} do
-  #   ## Set expected sequence number = NewSeqNo
-
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
-
-  #   msg_seqnum = 11
-  #   tag_new_seq_no = "36"
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|34=#{msg_seqnum}|" <>
-  #     "49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|#{tag_new_seq_no}=14|" <>
-  #     "123=Y|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
-
-  #   assert Session.get_status(session) == :online
-  #   assert Session.get_in_lastseq(session) == 14
-
-  #   assert length(msgs_to_send) == 0
-  # end
-
-  # test "SeqResetGapFill w/NewSeqNo>MsgSeqNum AND MsgSeqNum<Expected AND PossDupFlag=Y (p. 56)", %{config: cfg} do
-  #   ## Ignore message
-
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
-
-  #   msg_seqnum = 9
-  #   tag_new_seq_no = "36"
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|34=#{msg_seqnum}|" <>
-  #     "49=SELLSIDE|43=Y|52=20170717-17:50:56.123|56=BUYSIDE|#{tag_new_seq_no}=14|" <>
-  #     "123=Y|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
-
-  #   assert Session.get_status(session) == :online
-  #   assert Session.get_in_lastseq(session) == 10
-
-  #   assert length(msgs_to_send) == 0
-  # end
-
-  # test "SeqResetGapFill w/NewSeqNo>MsgSeqNum AND MsgSeqNum<Expected AND PossDupFlag!=Y (p. 56)", %{config: cfg} do
-  #   # 1. Send Logout message with text "MsgSeqNum too low, expecting X received Y"
-  #   # 2. Optional - Wait for Logout message response (note likely will have inaccurate MsgSeqNum)
-  #   #    or wait 2 seconds whichever comes first
-  #   # 3. Disconnect
-  #   # Error condition
-
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
-
-  #   msg_seqnum = 9
-  #   tag_new_seq_no = "36"
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|34=#{msg_seqnum}|" <>
-  #     "49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|#{tag_new_seq_no}=14|" <>
-  #     "123=Y|10=$$$|")
-  #   {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
-
-  #   assert Session.get_status(session) == :disconnecting
-  #   assert length(msgs_to_send) == 1
-  #   [logout_msg] = msgs_to_send
-
-  #   assert logout_msg.seqnum == 6
-  #   assert logout_msg.msg_type == @msg_type_logout
-  #   assert logout_msg.sender == "BUYSIDE"
-  #   assert logout_msg.target == "SELLSIDE"
-  #   assert logout_msg.orig_sending_time == @t0
-  #   assert :lists.keyfind("58", 1, logout_msg.body) ==
-  #     {"58", "MsgSeqNum too low, expecting 11 but received 9"}
-  # end
-
-  # @tag :try1
-  # test "SeqResetGapFill with NewSeqNo<=MsgSeqNum AND MsgSeqNum=Expected (p. 57)", %{config: cfg} do
-  #   ## Send Reject (session level) with message: " attempt to lower sequence number, invalid value NewSeqNum={x}"
-
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
-
-  #   msg_seqnum = 11
-  #   tag_new_seq_no = "36"
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|" <>
-  #     "34=#{msg_seqnum}|49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|" <>
-  #     "#{tag_new_seq_no}=10|123=Y|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
-
-  #   assert Session.get_status(session) == :online
-  #   assert Session.get_in_lastseq(session) == 10
-
-  #   assert length(msgs_to_send) == 1
-  #   [reject_msg] = msgs_to_send
-
-  #   assert reject_msg.seqnum == 6
-  #   assert reject_msg.msg_type == @msg_type_reject
-  #   assert reject_msg.sender == "BUYSIDE"
-  #   assert reject_msg.target == "SELLSIDE"
-  #   assert reject_msg.orig_sending_time == @t0
-  #   assert :lists.keyfind("58", 1, reject_msg.body) ==
-  #     {"58", "Attempt to lower sequence number, invalid value NewSeqNum=10"}
-  # end
-
-  # test "Receive SeqReset (reset) with NewSeqNum > than expected seq num (p. 57)", %{config: cfg} do
-  #   ## 1. Accept the Sequence Reset (Reset) msg without regards to its MsgSeqNum
-  #   ## 2. Set the expected sequence number equal to NewSeqNo
-
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
-
-  #   msg_seqnum = 11
-  #   tag_new_seq_no = "36"
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|" <>
-  #     "34=#{msg_seqnum}|49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|" <>
-  #     "#{tag_new_seq_no}=15|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
-
-  #   assert Session.get_status(session) == :online
-  #   assert Session.get_in_lastseq(session) == 14
-  #   assert length(msgs_to_send) == 0
-  # end
-
-  # test "Receive SeqReset (reset) with NewSeqNum = than expected seq num (p. 57)", %{config: cfg} do
-  #   ## 1. Accept the Sequence Reset (Reset) msg without regards to its MsgSeqNum
-  #   ## Warning condition
-
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
-
-  #   msg_seqnum = 11
-  #   tag_new_seq_no = "36"
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|" <>
-  #     "34=#{msg_seqnum}|49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|" <>
-  #     "#{tag_new_seq_no}=11|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
-
-  #   assert Session.get_status(session) == :online
-  #   assert Session.get_in_lastseq(session) == 10
-  #   assert length(msgs_to_send) == 0
-  # end
-
-  # test "Receive SeqReset (reset) with NewSeqNum < than expected seq num (p. 57)", %{config: cfg} do
-  #   ## 1. Accept the Sequence Reset (Reset) msg without regards to its MsgSeqNum
-  #   ## 2. Send Reject (session level) msg with SessionRejectReason = "Value is incorrect (out of range) for this tag"
-  #   ## 3. DO NOT increment inbound MsgSeqNum
-  #   ## 4. Error condition
-  #   ## 5. DO NOT lower expected sequence number
-
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
-
-  #   msg_seqnum = 11
-  #   tag_new_seq_no = "36"
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_sequence_reset}|" <>
-  #     "34=#{msg_seqnum}|49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|" <>
-  #     "#{tag_new_seq_no}=9|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
-
-  #   assert Session.get_status(session) == :online
-  #   assert Session.get_in_lastseq(session) == 10
-  #   assert length(msgs_to_send) == 1
-
-  #   [reject_msg] = msgs_to_send
-
-  #   assert reject_msg.seqnum == 6
-  #   assert reject_msg.msg_type == @msg_type_reject
-  #   assert reject_msg.sender == "BUYSIDE"
-  #   assert reject_msg.target == "SELLSIDE"
-  #   assert reject_msg.orig_sending_time == @t0
-  #   assert :lists.keyfind("58", 1, reject_msg.body) ==
-  #     {"58", "Value is incorrect (out of range) for this tag"}
-  # end
-
-  # test "Initiate Logout (p. 58)", %{config: cfg} do
-  #   ## 1. Send Logout message
-  #   ## 2. Wait for Logout message response up to 10 seconds. If not received => Warning condition
-  #   ## 3. Disconnect
-
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
-
-  #   {:logout_and_wait, msgs_to_send, session} = Session.session_stop(session)
-
-  #   assert Session.get_status(session) == :disconnecting
-  #   assert length(msgs_to_send) == 1
-
-  #   [logout] = msgs_to_send
-
-  #   assert logout.seqnum == 6
-  #   assert logout.msg_type == @msg_type_logout
-  #   assert logout.sender == "BUYSIDE"
-  #   assert logout.target == "SELLSIDE"
-  # end
-
-  # test "Receive valid Logout message in response to a solicited logout process (p. 58)", %{config: cfg} do
-  #   ## Disconnect without sending a message
-
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :disconnecting, in_lastseq: 10, out_lastseq: 5}
-
-  #   msg_seqnum = 11
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_logout}|" <>
-  #     "34=#{msg_seqnum}|49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
-
-  #   assert Session.get_status(session) == :offline
-  #   assert length(msgs_to_send) == 0
-  # end
-
-  # test "Receive valid Logout message unsolicited (p. 58)", %{config: cfg} do
-  #   ## 1. Send Logout response message
-  #   ## 2. Wait for counterparty to disconnect up to 10 seconds. If max exceeded, disconnect and 'Error condition'
-
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
-
-  #   msg_seqnum = 11
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=#{@msg_type_logout}|" <>
-  #     "34=#{msg_seqnum}|49=SELLSIDE|52=20170717-17:50:56.123|56=BUYSIDE|10=$$$|")
-  #   {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
-
-  #   assert Session.get_status(session) == :disconnecting
-  #   assert length(msgs_to_send) == 1
-
-  #   [logout] = msgs_to_send
-
-  #   assert logout.seqnum == 6
-  #   assert logout.msg_type == @msg_type_logout
-  #   assert logout.sender == "BUYSIDE"
-  #   assert logout.target == "SELLSIDE"
-  # end
+
+    fields = [{"1", 100}, {"55", "ABC1"}, {"44", 4.56}]
+    {:ok, _, session} = Session.send_message(session, "D", [{1, "acc1"}] ++ fields) # seqnum 2
+    {:ok, _, session} = Session.send_message(session, "D", [{1, "acc1"}] ++ fields) # seqnum 3
+    {:ok, _, session} = Session.send_message(session, "0", []) # seqnum 4 (heartbeat)
+    {:ok, _, session} = Session.send_message(session, "D", [{1, "acc1"}] ++ fields) # seqnum 5
+
+    seq = 2
+    incoming_data = build_message(@msg_type_resend_request, seq, "SELLSIDE", "BUYSIDE", @t_plus_1,
+      [{@field_begin_seq_no, 2}, {@field_end_seq_no, 5}])
+    session = Session.set_time(session, @t_plus_1)
+    {:resend, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert length(msgs_to_send) == 4  ## FIXME 3!
+    assert Session.get_status(session) == :online
+    ## TODO asserts
+  end
+
+  test "SeqResetGapFill with NewSeqNo>MsgSeqNum AND MsgSeqNum>Expected (p. 56)", %{config: cfg} do
+    ## Issue Resend Request to fill gap between last expected MsgSeqNum and received MsgSeqNum
+
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    seq = 13
+    new_seq_no = 14
+    gap_fill = true
+    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t_plus_1,
+      [{@field_new_seq_no, new_seq_no}, {@field_gap_fill, gap_fill}])
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 10
+
+    assert length(msgs_to_send) == 1
+    [resend_req] = msgs_to_send
+
+    assert resend_req.seqnum == 6
+    assert resend_req.msg_type == @msg_type_resend_request
+    {"7", 11} = :lists.keyfind("7", 1, resend_req.body)
+    {"16", 12} = :lists.keyfind("16", 1, resend_req.body)
+
+    assert Session.get_in_queue_length(session) == 1
+    [queued_message] = Session.get_in_queue(session)
+
+    assert queued_message.valid == true
+    assert queued_message.seqnum == 13
+    assert queued_message.msg_type == @msg_type_sequence_reset
+  end
+
+  test "SeqResetGapFill with NewSeqNo>MsgSeqNum AND MsgSeqNum=Expected (p. 56)", %{config: cfg} do
+    ## Set expected sequence number = NewSeqNo
+
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    seq = 11
+    new_seq_no = 14
+    gap_fill = true
+    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t_plus_1,
+      [{@field_new_seq_no, new_seq_no}, {@field_gap_fill, gap_fill}])
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 14
+
+    assert length(msgs_to_send) == 0
+  end
+
+    test "SeqResetGapFill w/NewSeqNo>MsgSeqNum AND MsgSeqNum<Expected AND PossDupFlag=Y (p. 56)", %{config: cfg} do
+      ## Ignore message
+
+      {:ok, session} = Session.init(cfg)
+      session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+      seq = 9
+      new_seq_no = 14
+      gap_fill = true
+      resend = true
+      incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t_plus_1,
+        [{@field_new_seq_no, new_seq_no}, {@field_gap_fill, gap_fill}], @t_plus_1, resend)
+      session = Session.set_time(session, @t_plus_1)
+      {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+      assert Session.get_status(session) == :online
+      assert Session.get_in_lastseq(session) == 10
+
+      assert length(msgs_to_send) == 0
+    end
+
+  test "SeqResetGapFill w/NewSeqNo>MsgSeqNum AND MsgSeqNum<Expected AND PossDupFlag!=Y (p. 56)", %{config: cfg} do
+    # 1. Send Logout message with text "MsgSeqNum too low, expecting X received Y"
+    # 2. Optional - Wait for Logout message response (note likely will have inaccurate MsgSeqNum)
+    #    or wait 2 seconds whichever comes first
+    # 3. Disconnect
+    # Error condition
+
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    seq = 9
+    new_seq_no = 14
+    gap_fill = true
+    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0,
+      [{@field_new_seq_no, new_seq_no}, {@field_gap_fill, gap_fill}])
+    session = Session.set_time(session, @t_plus_1)
+    {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :disconnecting
+    assert length(msgs_to_send) == 1
+    [logout_msg] = msgs_to_send
+
+    assert logout_msg.seqnum == 6
+    assert logout_msg.msg_type == @msg_type_logout
+    assert logout_msg.sender == "BUYSIDE"
+    assert logout_msg.target == "SELLSIDE"
+    assert logout_msg.orig_sending_time == @t_plus_1
+    assert :lists.keyfind("58", 1, logout_msg.body) ==
+      {"58", "MsgSeqNum too low, expecting 11 but received 9"}
+  end
+
+  test "SeqResetGapFill with NewSeqNo<=MsgSeqNum AND MsgSeqNum=Expected (p. 57)", %{config: cfg} do
+    ## Send Reject (session level) with message: " attempt to lower sequence number, invalid value NewSeqNum={x}"
+
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    seq = 11
+    new_seq_no = 10
+    gap_fill = true
+    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0,
+      [{@field_new_seq_no, new_seq_no}, {@field_gap_fill, gap_fill}])
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 10
+
+    assert length(msgs_to_send) == 1
+    [reject_msg] = msgs_to_send
+
+    assert reject_msg.seqnum == 6
+    assert reject_msg.msg_type == @msg_type_reject
+    assert reject_msg.sender == "BUYSIDE"
+    assert reject_msg.target == "SELLSIDE"
+    assert reject_msg.orig_sending_time == @t_plus_1
+    assert :lists.keyfind("58", 1, reject_msg.body) ==
+      {"58", "Attempt to lower sequence number, invalid value NewSeqNum=10"}
+  end
+
+  test "Receive SeqReset (reset) with NewSeqNum > than expected seq num (p. 57)", %{config: cfg} do
+    ## 1. Accept the Sequence Reset (Reset) msg without regards to its MsgSeqNum
+    ## 2. Set the expected sequence number equal to NewSeqNo
+
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    seq = 11
+    new_seq_no = 15
+    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0,
+      [{@field_new_seq_no, new_seq_no}])
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 14
+    assert length(msgs_to_send) == 0
+  end
+
+  test "Receive SeqReset (reset) with NewSeqNum = than expected seq num (p. 57)", %{config: cfg} do
+    ## 1. Accept the Sequence Reset (Reset) msg without regards to its MsgSeqNum
+    ## Warning condition
+
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    seq = 11
+    new_seq_no = 11
+    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0,
+      [{@field_new_seq_no, new_seq_no}])
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 10
+    assert length(msgs_to_send) == 0
+  end
+
+  test "Receive SeqReset (reset) with NewSeqNum < than expected seq num (p. 57)", %{config: cfg} do
+    ## 1. Accept the Sequence Reset (Reset) msg without regards to its MsgSeqNum
+    ## 2. Send Reject (session level) msg with SessionRejectReason = "Value is incorrect (out of range) for this tag"
+    ## 3. DO NOT increment inbound MsgSeqNum
+    ## 4. Error condition
+    ## 5. DO NOT lower expected sequence number
+
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    seq = 11
+    new_seq_no = 9
+    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0,
+      [{@field_new_seq_no, new_seq_no}])
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 10
+    assert length(msgs_to_send) == 1
+
+    [reject_msg] = msgs_to_send
+
+    assert reject_msg.seqnum == 6
+    assert reject_msg.msg_type == @msg_type_reject
+    assert reject_msg.sender == "BUYSIDE"
+    assert reject_msg.target == "SELLSIDE"
+    assert reject_msg.orig_sending_time == @t_plus_1
+    assert :lists.keyfind("58", 1, reject_msg.body) ==
+      {"58", "Value is incorrect (out of range) for this tag"}
+  end
+
+  test "Initiate Logout (p. 58)", %{config: cfg} do
+    ## 1. Send Logout message
+    ## 2. Wait for Logout message response up to 10 seconds. If not received => Warning condition
+    ## 3. Disconnect
+
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    {:logout_and_wait, msgs_to_send, session} = Session.session_stop(session)
+
+    assert Session.get_status(session) == :disconnecting
+    assert length(msgs_to_send) == 1
+
+    [logout] = msgs_to_send
+
+    assert logout.seqnum == 6
+    assert logout.msg_type == @msg_type_logout
+    assert logout.sender == "BUYSIDE"
+    assert logout.target == "SELLSIDE"
+  end
+
+  test "Receive valid Logout message in response to a solicited logout process (p. 58)", %{config: cfg} do
+    ## Disconnect without sending a message
+
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :disconnecting, in_lastseq: 10, out_lastseq: 5}
+
+    seq = 11
+    incoming_data = build_message(@msg_type_logout, seq, "SELLSIDE", "BUYSIDE", @t_plus_1)
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :offline
+    assert length(msgs_to_send) == 0
+  end
+
+  test "Receive valid Logout message unsolicited (p. 58)", %{config: cfg} do
+    ## 1. Send Logout response message
+    ## 2. Wait for counterparty to disconnect up to 10 seconds. If max exceeded, disconnect and 'Error condition'
+
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    seq = 11
+    incoming_data = build_message(@msg_type_logout, seq, "SELLSIDE", "BUYSIDE", @t_plus_1)
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :disconnecting
+    assert length(msgs_to_send) == 1
+
+    [logout] = msgs_to_send
+
+    assert logout.seqnum == 6
+    assert logout.msg_type == @msg_type_logout
+    assert logout.sender == "BUYSIDE"
+    assert logout.target == "SELLSIDE"
+  end
 end
