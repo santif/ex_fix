@@ -67,7 +67,7 @@ defmodule ExFix.SessionTest do
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
     incoming_data = build_message(@msg_type_new_order_single, 12, "SELLSIDE", "BUYSIDE",
-      @t_plus_1, [{@field_account, "1234"}, {@field_last_px, 1.23}])
+      @t_plus_1, [{@field_account, "1234"}])
 
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -85,31 +85,31 @@ defmodule ExFix.SessionTest do
     assert queued_message.msg_type == @msg_type_new_order_single
   end
 
-  # test "MsgSeqNum lower than expected without PossDupFlag set to Y (p. 49)", %{config: cfg} do
-  #   # Respond with Logout with "MsgSeqNum too low, expecting X but received Y" (optional - wait for response)
-  #   # Disconnect
+  test "MsgSeqNum lower than expected without PossDupFlag set to Y (p. 49)", %{config: cfg} do
+    # Respond with Logout with "MsgSeqNum too low, expecting X but received Y" (optional - wait for response)
+    # Disconnect
 
-  #   {:ok, session} = Session.init(cfg)
-  #   session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    cfg = %SessionConfig{cfg | time_service: {FixDummyApplication, :now, [@t_plus_2]}}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-  #   msg_seqnum = 9
-  #   incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
-  #     "52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|")
-  #   {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+    incoming_data = build_message(@msg_type_execution_report, 9, "SELLSIDE", "BUYSIDE",
+      @t_plus_1, [{@field_account, "1234"}])
+    {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
-  #   assert Session.get_status(session) == :disconnecting
+    assert Session.get_status(session) == :disconnecting
 
-  #   assert length(msgs_to_send) == 1
-  #   [logout] = msgs_to_send
+    assert length(msgs_to_send) == 1
+    [logout] = msgs_to_send
 
-  #   assert logout.seqnum == 6
-  #   assert logout.msg_type == @msg_type_logout
-  #   assert logout.sender == "BUYSIDE"
-  #   assert logout.target == "SELLSIDE"
-  #   assert logout.orig_sending_time == @t0
-  #   assert :lists.keyfind("58", 1, logout.body) ==
-  #     {"58", "MsgSeqNum too low, expecting 11 but received 9"}
-  # end
+    assert logout.seqnum == 6
+    assert logout.msg_type == @msg_type_logout
+    assert logout.sender == "BUYSIDE"
+    assert logout.target == "SELLSIDE"
+    assert logout.orig_sending_time == @t_plus_2
+    assert :lists.keyfind("58", 1, logout.body) ==
+      {"58", "MsgSeqNum too low, expecting 11 but received 9"}
+  end
 
   # test "Garbled message received - 1 (p. 49)", %{config: cfg} do
   #   # Ignore message - don't increment expected MsgSeqNum

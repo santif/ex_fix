@@ -63,8 +63,6 @@ defmodule ExFix.TestHelper do
   @doc """
   Builds test message
   """
-  # build_message(@msg_type_new_order_single, 12, "SELLSIDE", "BUYSIDE",
-  #     @t_plus_1, [{@field_account, "1234"}, {@field_last_px, 1.23}])
   def build_message(msg_type, seqnum, sender, target, now, fields \\ [], orig_sending_time \\ nil, resend \\ false) do
     fields = for {field_name, value} <- fields do
       {field, _} = Dictionary.tag_info(field_name)
