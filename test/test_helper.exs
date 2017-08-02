@@ -115,7 +115,6 @@ defmodule ExFix.TestHelper do
       {:reply, :ok, state}
     end
     def handle_call({:session_update_status, fix_session_name, status}, _from, state) do
-      IO.puts ">> ession_update_status() -> #{fix_session_name}, #{status}"
       state = Map.put(state, fix_session_name, status)
       {:reply, :ok, state}
     end
