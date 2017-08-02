@@ -86,6 +86,12 @@ defmodule ExFix.Session do
   def get_in_lastseq(%Session{in_lastseq: in_lastseq}), do: in_lastseq
 
   @doc """
+  Returns session's extra bytes to be processed with the next segment
+  """
+  @spec get_extra_bytes(Session.t) :: binary() | nil
+  def get_extra_bytes(%Session{extra_bytes: extra_bytes}), do: extra_bytes
+
+  @doc """
   Returns inbound message queue (messages received with high sequence number)
   """
   @spec get_in_queue(Session.t) :: T.session_in_queue
@@ -179,10 +185,10 @@ defmodule ExFix.Session do
       dictionary: dictionary}, extra_bytes: extra_bytes,
       in_lastseq: in_lastseq} = session, data) do
 
-    data = << extra_bytes::binary(), data::binary() >>
     expected_seqnum = in_lastseq + 1
 
-    msg = Parser.parse1(data, dictionary, expected_seqnum, validate)
+    msg = Parser.parse1(<< extra_bytes::binary(), data::binary() >>,
+      dictionary, expected_seqnum, validate)
 
     case msg.valid do
       true ->
@@ -377,7 +383,8 @@ defmodule ExFix.Session do
       out_lastseq: out_lastseq, extra_bytes: msg.other_msgs}}
   end
   def process_invalid_message(%Session{config: config, out_lastseq: out_lastseq} = session,
-      expected_seqnum, %Message{seqnum: seqnum} = msg) when seqnum > expected_seqnum do
+      expected_seqnum, %Message{seqnum: seqnum} = msg)
+      when is_number(seqnum) and seqnum > expected_seqnum do
     out_lastseq = out_lastseq + 1
     init_gap = expected_seqnum
     end_gap = seqnum - 1
@@ -389,7 +396,7 @@ defmodule ExFix.Session do
   end
   def process_invalid_message(%Session{config: config, out_lastseq: out_lastseq} = session,
       expected_seqnum, %Message{seqnum: seqnum, fields: fields} = msg)
-      when seqnum < expected_seqnum do
+      when is_number(seqnum) and seqnum < expected_seqnum do
     case :lists.keyfind(@field_poss_dup_flag, 1, fields) do
       {@field_poss_dup_flag, "Y"} ->
         {:ok, [], %Session{session | extra_bytes: msg.other_msgs}}
