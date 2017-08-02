@@ -75,7 +75,7 @@ defmodule ExFix.SessionTest do
     assert msgs_to_send == []
   end
 
-  test "Execution Report received in two segments", %{config: cfg} do
+  test "Execution Report - fragmented", %{config: cfg} do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
     assert byte_size(Session.get_extra_bytes(session)) == 0
@@ -86,7 +86,7 @@ defmodule ExFix.SessionTest do
       "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
       "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|")
     IO.puts "[] >> #{incoming_data}"
-    << seg1::binary-size(100), seg2::binary() >> = incoming_data
+    << seg1::binary-size(100), seg2::binary-size(100), seg3::binary() >> = incoming_data
 
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, seg1)
     assert msgs_to_send == []
@@ -94,6 +94,11 @@ defmodule ExFix.SessionTest do
     assert byte_size(Session.get_extra_bytes(session)) == 100
 
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, seg2)
+    assert msgs_to_send == []
+    assert Session.get_status(session) == :online
+    assert byte_size(Session.get_extra_bytes(session)) == 200
+
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, seg3)
     assert msgs_to_send == []
     assert Session.get_status(session) == :online
     assert Session.get_in_lastseq(session) == 11
