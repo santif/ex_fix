@@ -63,7 +63,7 @@ defmodule ExFix.TestHelper do
     Session registry for tests
     """
 
-    @behaviour ExFix.SessionRegistry
+    # @behaviour ExFix.SessionRegistry
     use GenServer
 
     ##
@@ -76,16 +76,6 @@ defmodule ExFix.TestHelper do
 
     def get_session_status(session_name) do
       GenServer.call(__MODULE__, {:get_status, session_name})
-    end
-
-    def start_session(session_name, config) do
-      GenServer.call(__MODULE__, {:start_session, session_name})
-      {:ok, _} = Supervisor.start_child(ExFix.SessionSup, [config, __MODULE__])
-      :ok
-    end
-
-    def stop_session(session_name) do
-      GenServer.call(__MODULE__, {:stop_session, session_name})
     end
 
     ##
@@ -121,8 +111,7 @@ defmodule ExFix.TestHelper do
       {:reply, :ok, state}
     end
     def handle_call({:session_on_init, fix_session_name}, _from, state) do
-      IO.puts ">> session_on_init() -> #{fix_session_name}"
-      state = Map.put(state, fix_session_name, :connected)
+      state = Map.put(state, fix_session_name, :connecting)
       {:reply, :ok, state}
     end
     def handle_call({:session_update_status, fix_session_name, status}, _from, state) do

@@ -43,7 +43,7 @@ defmodule ExFix.SessionWorker do
   def stop(fix_session) do
     # name = {:via, ExFix.Registry, {:ex_fix_session, fix_session}}
     name = :"ex_fix_session_#{fix_session}"
-    GenServer.cast(name, :stop)
+    GenServer.call(name, :stop)
   end
 
   ##
@@ -98,7 +98,7 @@ defmodule ExFix.SessionWorker do
     {:reply, :ok, %State{state | session: session}}
   end
 
-  def handle_cast(:stop, %State{transport: transport, client: client,
+  def handle_call(:stop, _from, %State{transport: transport, client: client,
       session: session} = state) do
     state = case Session.session_stop(session) do
       {:logout_and_wait, msgs_to_send, session} ->
@@ -109,7 +109,7 @@ defmodule ExFix.SessionWorker do
         %State{state | session: session}
     end
     transport.close(client)
-    {:stop, :normal, state}
+    {:stop, :normal, :ok, state}
   end
 
   def terminate(:econnrefused, %State{name: fix_session_name,
@@ -122,7 +122,14 @@ defmodule ExFix.SessionWorker do
     session_registry.session_update_status(fix_session_name, :reconnecting)
     :ok
   end
-  def terminate(_reason, _state), do: :ok
+  def terminate(:normal, %State{name: fix_session_name,
+      session_registry: session_registry} = _state) do
+    session_registry.session_update_status(fix_session_name, :disconnected)
+    :ok
+  end
+  def terminate(_reason, _state) do
+    :ok
+  end
 
   ##
   ## Private functions
