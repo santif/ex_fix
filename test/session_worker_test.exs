@@ -51,7 +51,7 @@ defmodule ExFix.SessionWorkerTest do
   end
 
   test "Session worker simple test", %{config: cfg} do
-    {:ok, session} = SessionWorker.start_link(cfg, TestSessionRegistry)
+    {:ok, _session} = SessionWorker.start_link(cfg, TestSessionRegistry)
     assert_receive {:data, logon_msg}
     assert TestSessionRegistry.get_session_status("sessiontest1") == :connecting
     assert "8=FIXT.1.1" <> _ = logon_msg

@@ -21,7 +21,6 @@ defmodule ExFix.SessionTest do
 
   # App fields used in tests
   @field_account 1
-  @field_last_px 31
   @field_begin_seq_no 7
   @field_end_seq_no 16
   @field_new_seq_no 36
@@ -62,6 +61,43 @@ defmodule ExFix.SessionTest do
 
     assert Session.get_status(session) == :online
     assert msgs_to_send == []
+  end
+
+  test "Execution Report received", %{config: cfg} do
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    incoming_data = build_message(@msg_type_execution_report, 11, "SELLSIDE", "BUYSIDE",
+      @t_plus_1, [{@field_account, "1234"}])
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 11
+    assert msgs_to_send == []
+  end
+
+  test "Execution Report received in two segments", %{config: cfg} do
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    assert byte_size(Session.get_extra_bytes(session)) == 0
+
+    seq = 11
+    incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.802|" <>
+      "56=BUYSIDE|1=1557|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
+      "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
+      "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|")
+    IO.puts "[] >> #{incoming_data}"
+    << seg1::binary-size(100), seg2::binary() >> = incoming_data
+
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, seg1)
+    assert msgs_to_send == []
+    assert Session.get_status(session) == :online
+    assert byte_size(Session.get_extra_bytes(session)) == 100
+
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, seg2)
+    assert msgs_to_send == []
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 11
+    assert byte_size(Session.get_extra_bytes(session)) == 0
   end
 
   test "Message received with MsgSeqNum higher than expected (p. 49)", %{config: cfg} do
