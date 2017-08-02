@@ -51,7 +51,6 @@ defmodule ExFix.SessionWorker do
   ##
 
   def init([config, session_registry]) do
-    Logger.warn ">> Starting session worker - SessionRegistry: #{inspect session_registry}"
     action = session_registry.session_on_init(config.name)
     send(self(), {:init, action, config})
     {:ok, %State{name: config.name, mode: config.mode,
