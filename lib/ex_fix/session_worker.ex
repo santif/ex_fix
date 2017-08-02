@@ -150,6 +150,10 @@ defmodule ExFix.SessionWorker do
         send(rx_timer, :msg)
         do_send_messages(msgs_to_send, state)
         {:noreply, %State{state | session: session2}}
+      {:continue, msgs_to_send, session2} ->
+        send(rx_timer, :msg)
+        do_send_messages(msgs_to_send, state)
+        handle_data("", %State{state | session: session2})
       {:resend, msgs_to_send, session2} ->
         send(rx_timer, :msg)
         do_send_messages(msgs_to_send, state, true)

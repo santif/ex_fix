@@ -85,7 +85,6 @@ defmodule ExFix.SessionTest do
       "56=BUYSIDE|1=1557|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
       "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
       "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|")
-    IO.puts "[] >> #{incoming_data}"
     << seg1::binary-size(100), seg2::binary-size(100), seg3::binary() >> = incoming_data
 
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, seg1)
@@ -103,6 +102,74 @@ defmodule ExFix.SessionTest do
     assert Session.get_status(session) == :online
     assert Session.get_in_lastseq(session) == 11
     assert byte_size(Session.get_extra_bytes(session)) == 0
+  end
+
+  test "Receiving multiple messages in a single segment", %{config: cfg} do
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    assert byte_size(Session.get_extra_bytes(session)) == 0
+
+    seq = 11
+    incoming_data1 = msg("8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.802|" <>
+      "56=BUYSIDE|1=1557|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
+      "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
+      "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|")
+    seq = 12
+    incoming_data2 = msg("8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.803|" <>
+      "56=BUYSIDE|1=1558|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
+      "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
+      "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|")
+    incoming_data = << incoming_data1::binary(), incoming_data2::binary() >>
+
+    {:continue, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+    assert msgs_to_send == []
+    assert Session.get_status(session) == :online
+    assert Session.get_extra_bytes(session) != ""
+    assert Session.get_in_lastseq(session) == 11
+
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, "")
+    assert msgs_to_send == []
+    assert Session.get_status(session) == :online
+    assert Session.get_extra_bytes(session) == ""
+    assert Session.get_in_lastseq(session) == 12
+  end
+
+  test "Receiving 1.5 messages in a segment", %{config: cfg} do
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    assert byte_size(Session.get_extra_bytes(session)) == 0
+
+    seq = 11
+    msg1 = msg("8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.802|" <>
+      "56=BUYSIDE|1=1557|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
+      "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
+      "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|")
+    seq = 12
+    msg2 = msg("8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.803|" <>
+      "56=BUYSIDE|1=1558|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
+      "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
+      "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|")
+
+    << seg1::binary-size(100), incoming_data2::binary() >> = msg2
+    incoming_data1 = << msg1::binary(), seg1::binary() >>
+
+    {:continue, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data1)
+    assert msgs_to_send == []
+    assert Session.get_status(session) == :online
+    assert Session.get_extra_bytes(session) != ""
+    assert Session.get_in_lastseq(session) == 11
+
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, "")
+    assert msgs_to_send == []
+    assert Session.get_status(session) == :online
+    assert Session.get_extra_bytes(session) != ""
+    assert Session.get_in_lastseq(session) == 11
+
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data2)
+    assert msgs_to_send == []
+    assert Session.get_status(session) == :online
+    assert Session.get_extra_bytes(session) == ""
+    assert Session.get_in_lastseq(session) == 12
   end
 
   test "Message received with MsgSeqNum higher than expected (p. 49)", %{config: cfg} do
@@ -469,7 +536,6 @@ defmodule ExFix.SessionTest do
 
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 1, out_lastseq: 1}
-
 
     fields = [{"1", 100}, {"55", "ABC1"}, {"44", 4.56}]
     {:ok, _, session} = Session.send_message(session, "D", [{1, "acc1"}] ++ fields) # seqnum 2

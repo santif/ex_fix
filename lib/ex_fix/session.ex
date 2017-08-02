@@ -196,9 +196,20 @@ defmodule ExFix.Session do
           Logger.info "[fix.incoming] [#{session_name}] " <>
             :unicode.characters_to_binary(msg.original_fix_msg, :latin1, :utf8)
         end
-        process_incoming_message(expected_seqnum, msg.msg_type, session_name,
-          session, msg)
-      false ->
+
+        case msg.other_msgs do
+          "" -> 
+            process_incoming_message(expected_seqnum, msg.msg_type,
+              session_name, session, msg)
+
+          _ ->
+            {result, msgs_to_send, session} = process_incoming_message(
+              expected_seqnum, msg.msg_type, session_name, session, msg)
+            result2 = if result == :ok, do: :continue, else: result
+            {result2, msgs_to_send, session}
+        end
+
+        false ->
         process_invalid_message(session, expected_seqnum, msg)
     end
   end
