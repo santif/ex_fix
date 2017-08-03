@@ -96,15 +96,15 @@ In addition, there are fewer dependencies and number of possible failure points.
 - Serializer benchmark: New Order Single with 115 bytes.
 
 ```
-$ mix bench
+$ mix bench -d 2
 ...
 ## ExFixBench
 benchmark name                         iterations   average time
-Parse - Stage 1 (without validation)       500000   6.26 µs/op
-Parse - Stage 1                            500000   7.64 µs/op
-Serialize                                  100000   11.75 µs/op
-Parse - Full Msg (without validation)      100000   14.42 µs/op
-Parse - Full Msg                           100000   16.23 µs/op
+Parse - Stage 1 (without validation)       500000   6.41 µs/op
+Parse - Stage 1                            500000   8.12 µs/op
+Serialize                                  500000   11.76 µs/op
+Parse - Full Msg (without validation)      500000   14.86 µs/op
+Parse - Full Msg                           200000   16.55 µs/op
 ```
 
 ## Author
@@ -113,7 +113,8 @@ Santiago Fernandez `<santif@gmail.com>`.
 
 ## License
 
-Copyright (c) 2017 Matriz S.A. [http://www.matriz.com.ar](http://www.matriz.com.ar)
+Copyright (c) 2017 Matriz S.A.
+[http://www.matriz.com.ar](http://www.matriz.com.ar)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
