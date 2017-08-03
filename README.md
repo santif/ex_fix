@@ -79,7 +79,6 @@ This is a work in progress. Here is a list of some pending tasks, PRs are welcom
   - Dictionary based message parse/validation/serialization
   - Automatic generation of parser/validator/serializer from XML dictionary file
   - Repeating groups
-- Handle RawData fields
 - FIX session acceptor
 - Multiple hosts configuration, for failover
 - Session scheduling (integration with 3rd party job management libraries)

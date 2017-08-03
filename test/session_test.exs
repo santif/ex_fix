@@ -861,7 +861,6 @@ defmodule ExFix.SessionTest do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 8}
 
-    msg = %MessageToSend{sender: "BUYSIDE", target: "SELLSIDE", orig_sending_time: @t0, body: []}
     out_messages = [
       {3, %MessageToSend{seqnum: 3, msg_type: @msg_type_heartbeat}},
       {4, %MessageToSend{seqnum: 4, msg_type: @msg_type_reject}},

@@ -6,6 +6,8 @@ defmodule ExFix.Parser do
   alias ExFix.Types.Message
 
   @compile {:inline, parse_field: 1}
+  @compile {:inline, parse_expected_seqnum: 6}
+  @compile {:inline, parse_unexpected_seqnum: 6}
   @soh 1
 
   @doc """
@@ -24,7 +26,7 @@ defmodule ExFix.Parser do
   def parse1(data, dictionary, expected_seqnum \\ nil, validate \\ true)
   def parse1(<<"8=FIXT.1.1", @soh, "9=", rest::binary()>>, dictionary, expected_seqnum, validate) do
     [str_len, rest1] = :binary.split(rest, << @soh >>)
-    {len, _} = Integer.parse(rest)
+    {len, _} = Integer.parse(str_len)
     case rest1 do
       << body::binary-size(len), "10=", checksum::binary-size(3),
          @soh, other_msgs::binary() >> ->
@@ -63,8 +65,12 @@ defmodule ExFix.Parser do
   """
   def parse2(%Message{valid: true, complete: false, fields: fields,
       rest_msg: rest} = msg) do
-    {:ok, nil, fields2, ""} = do_parse(rest, nil, [])
-    %Message{msg | complete: true, fields: fields ++ fields2, rest_msg: ""}
+    case do_parse(rest, nil, []) do
+      {:ok, nil, fields2, ""} ->
+        %Message{msg | complete: true, fields: fields ++ fields2, rest_msg: ""}
+      {:error, :invalid_rawdata, nil, fields2} ->
+        %Message{msg | valid: false, error_reason: :garbled, fields: fields ++ fields2, rest_msg: ""}
+    end
   end
   def parse2(%Message{valid: true, complete: true} = msg) do
     msg
@@ -82,23 +88,11 @@ defmodule ExFix.Parser do
         {msg_seqnum, _} = Integer.parse(str_seqnum)
         case (msg_seqnum == expected_seqnum or expected_seqnum == nil) do
           true ->
-            {:ok, sub, fields, rest0} = do_parse(msg, dictionary.subject(msg_type),
-              [{"34", str_seqnum}, {"35", msg_type}])
-            poss_dup = :lists.keyfind("43", 1, fields) == {"43", "Y"}
-
-            %Message{valid: true, complete: (rest0 == ""), msg_type: msg_type,
-              subject: sub, poss_dup: poss_dup, fields: fields,
-              seqnum: expected_seqnum, rest_msg: rest0,
-              original_fix_msg: orig_msg, other_msgs: other_msgs}
-
+            parse_expected_seqnum(msg_seqnum, msg_type, msg,
+              dictionary.subject(msg_type), orig_msg, other_msgs)
           false ->
-            {:ok, sub, fields, rest0} = do_parse(msg, dictionary.subject(msg_type),
-              [{"34", str_seqnum}, {"35", msg_type}])
-            error_reason = :unexpected_seqnum
-            %Message{valid: false, msg_type: msg_type, seqnum: msg_seqnum,
-              subject: sub, fields: fields, rest_msg: rest0,
-              other_msgs: other_msgs, original_fix_msg: orig_msg,
-              error_reason: error_reason}
+            parse_unexpected_seqnum(msg_seqnum, msg_type, msg,
+              dictionary.subject(msg_type), orig_msg, other_msgs)
         end
 
       _ ->
@@ -109,6 +103,16 @@ defmodule ExFix.Parser do
 
   defp do_parse(<<"10=", _cs::binary()>>, _subject_field, acc) do
     {:ok, nil, :lists.reverse(acc), ""}
+  end
+  defp do_parse(<<"95=", rest::binary()>>, subject_field, acc) do
+    [str_len, rest1] = :binary.split(rest, << @soh >>)
+    {len, _} = Integer.parse(str_len)
+    case rest1 do
+      << "96=", rawdata::binary-size(len), @soh, other_fields::binary() >> ->
+        do_parse(other_fields, subject_field, [{"96", {:binary, rawdata}} | acc])
+      _ ->
+        {:error, :invalid_rawdata, subject_field, :lists.reverse(acc)}
+    end
   end
   defp do_parse(binmsg, nil, acc) do
     [pair, rest2] = :binary.split(binmsg, << @soh >>)
@@ -124,6 +128,40 @@ defmodule ExFix.Parser do
         {:ok, value, fields, rest2}
       false ->
         do_parse(rest2, subject_field, [{name, value} | acc])
+    end
+  end
+
+  defp parse_expected_seqnum(seqnum, msg_type, data, subject_field, orig_msg, other_msgs) do
+    case do_parse(data, subject_field, [{"34", "#{seqnum}"}, {"35", msg_type}]) do
+      {:ok, sub, fields, rest0} ->
+        poss_dup = :lists.keyfind("43", 1, fields) == {"43", "Y"}
+        %Message{valid: true, complete: rest0 == "", msg_type: msg_type,
+          subject: sub, poss_dup: poss_dup, fields: fields,
+          seqnum: seqnum, rest_msg: rest0,
+          original_fix_msg: orig_msg, other_msgs: other_msgs}
+      {:error, :invalid_rawdata, sub, fields} ->
+        poss_dup = :lists.keyfind("43", 1, fields) == {"43", "Y"}
+        %Message{valid: false, complete: true, msg_type: msg_type,
+          subject: sub, poss_dup: poss_dup, fields: fields,
+          seqnum: seqnum, rest_msg: "", error_reason: :garbled,
+          original_fix_msg: orig_msg, other_msgs: other_msgs}
+    end
+  end
+
+  defp parse_unexpected_seqnum(seqnum, msg_type, data, subject_field, orig_msg, other_msgs) do
+    case do_parse(data, subject_field, [{"34", "#{seqnum}"}, {"35", msg_type}]) do
+      {:ok, sub, fields, rest0} ->
+        poss_dup = :lists.keyfind("43", 1, fields) == {"43", "Y"}
+        %Message{valid: false, msg_type: msg_type, seqnum: seqnum,
+          subject: sub, fields: fields, rest_msg: rest0,
+          other_msgs: other_msgs, original_fix_msg: orig_msg,
+          error_reason: :unexpected_seqnum}
+      {:error, :invalid_rawdata, sub, fields} ->
+        poss_dup = :lists.keyfind("43", 1, fields) == {"43", "Y"}
+        %Message{valid: false, complete: true, msg_type: msg_type,
+          subject: sub, poss_dup: poss_dup, fields: fields,
+          seqnum: seqnum, rest_msg: "", error_reason: :garbled,
+          original_fix_msg: orig_msg, other_msgs: other_msgs}
     end
   end
 
