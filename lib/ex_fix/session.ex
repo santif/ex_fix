@@ -11,6 +11,8 @@ defmodule ExFix.Session do
   alias ExFix.Types.MessageToSend
   alias ExFix.Types.Message
 
+  @compile {:inline, process_valid_message: 4}
+
   ##
   ## Type definitions
   ##
@@ -196,20 +198,8 @@ defmodule ExFix.Session do
           Logger.info "[fix.incoming] [#{session_name}] " <>
             :unicode.characters_to_binary(msg.original_fix_msg, :latin1, :utf8)
         end
-
-        case msg.other_msgs do
-          "" -> 
-            process_incoming_message(expected_seqnum, msg.msg_type,
-              session_name, session, msg)
-
-          _ ->
-            {result, msgs_to_send, session} = process_incoming_message(
-              expected_seqnum, msg.msg_type, session_name, session, msg)
-            result2 = if result == :ok, do: :continue, else: result
-            {result2, msgs_to_send, session}
-        end
-
-        false ->
+        process_valid_message(expected_seqnum, session_name, session, msg)
+      false ->
         process_invalid_message(session, expected_seqnum, msg)
     end
   end
@@ -370,6 +360,24 @@ defmodule ExFix.Session do
     out_lastseq = out_lastseq + 1
     hb_msg = build_message(config, @msg_type_heartbeat, out_lastseq, [])
     {:ok, [hb_msg], %Session{session | out_lastseq: out_lastseq}}
+  end
+
+  @doc """
+  Process valid message
+  """
+  def process_valid_message(expected_seqnum, session_name, session,
+      %Message{msg_type: msg_type, other_msgs: ""} = msg) do
+    process_incoming_message(expected_seqnum, msg_type, session_name, session, msg)
+  end
+  def process_valid_message(expected_seqnum, session_name, session,
+      %Message{msg_type: msg_type} = msg) do
+    {result, msgs_to_send, session} = process_incoming_message(
+      expected_seqnum, msg_type, session_name, session, msg)
+    result2 = case result do
+      :ok -> :continue # other_msgs is not empty; continue with next message
+      v -> v
+    end
+    {result2, msgs_to_send, session}
   end
 
   @doc """

@@ -151,13 +151,19 @@ defmodule ExFix.Parser do
   defp parse_unexpected_seqnum(seqnum, msg_type, data, subject_field, orig_msg, other_msgs) do
     case do_parse(data, subject_field, [{"34", "#{seqnum}"}, {"35", msg_type}]) do
       {:ok, sub, fields, rest0} ->
-        poss_dup = :lists.keyfind("43", 1, fields) == {"43", "Y"}
+        poss_dup = case :lists.keyfind("43", 1, fields) do
+          {"43", "Y"} -> true
+          _ -> false
+        end
         %Message{valid: false, msg_type: msg_type, seqnum: seqnum,
           subject: sub, fields: fields, rest_msg: rest0,
           other_msgs: other_msgs, original_fix_msg: orig_msg,
           error_reason: :unexpected_seqnum}
       {:error, :invalid_rawdata, sub, fields} ->
-        poss_dup = :lists.keyfind("43", 1, fields) == {"43", "Y"}
+        poss_dup = case :lists.keyfind("43", 1, fields) do
+          {"43", "Y"} -> true
+          _ -> false
+        end
         %Message{valid: false, complete: true, msg_type: msg_type,
           subject: sub, poss_dup: poss_dup, fields: fields,
           seqnum: seqnum, rest_msg: "", error_reason: :garbled,
