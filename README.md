@@ -75,6 +75,7 @@ the time spent in the network client process.
 
 This is a work in progress. Here is a list of some pending tasks, PRs are welcome.
 
+- Documentation and more examples
 - Session Logon with `ResetSeqNumFlag=N`.
 - Multiple hosts configuration, for failover
 - Application level:
@@ -108,7 +109,7 @@ Parse - Full Msg (without validation)      500000   14.86 µs/op
 Parse - Full Msg                           200000   16.55 µs/op
 ```
 
-## Project maintainer
+## Maintainer
 
 Santiago Fernandez `<santif@gmail.com>`
 
