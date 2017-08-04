@@ -55,7 +55,7 @@ ExFix.start_session_initiator("mysession", "SENDER", "TARGET", MyFixApplication,
 
 - FIXT.1.1 session protocol implementation (session level messages)
 - Message validation: sequence number, length, checksum
-- Auto reconnection
+- Auto reconnection (with `ResetSeqNumFlag=Y`)
 - SSL compatible
 - Session registry
 - Two-phase parse of FIX messages
@@ -75,7 +75,7 @@ the time spent in the network client process.
 
 This is a work in progress. Here is a list of some pending tasks, PRs are welcome.
 
-- Session Logon with `ResetSeqNumFlag=Y`.
+- Session Logon with `ResetSeqNumFlag=N`.
 - Multiple hosts configuration, for failover
 - Application level:
   - Dictionary based message parse/validation/serialization
@@ -108,9 +108,9 @@ Parse - Full Msg (without validation)      500000   14.86 µs/op
 Parse - Full Msg                           200000   16.55 µs/op
 ```
 
-## Author
+## Project maintainer
 
-Santiago Fernandez `<santif@gmail.com>`.
+Santiago Fernandez `<santif@gmail.com>`
 
 ## License
 
