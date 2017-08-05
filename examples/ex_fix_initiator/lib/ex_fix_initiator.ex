@@ -8,43 +8,46 @@ defmodule ExFixInitiator do
     require Logger
     @behaviour ExFix.FixApplication
 
-    alias ExFix.Types.Message
+    alias ExFix.OutMessage
+    alias ExFix.InMessage
 
-    @tag_account       "1"
-    @tag_cl_ord_id     "11"
-    @tag_order_qty     "38"
-    @tag_ord_type      "40"
-    @tag_price         "44"
-    @tag_side          "54"
-    @tag_symbol        "55"
-    @tag_time_in_force "59"
-    @tag_transact_time "60"
+    @tag_account         1
+    @tag_cl_ord_id      11
+    @tag_order_qty      38
+    @tag_ord_type       40
+    @tag_price          44
+    @tag_side           54
+    @tag_symbol         55
+    @tag_time_in_force  59
+    @tag_transact_time  60
 
-    def on_logon(fix_session_name, _pid) do
-      Logger.info fn -> "[fix.incoming] [#{fix_session_name}] onLogon" end
+    def on_logon(session_id, _env) do
+      Logger.info fn -> "[fix.incoming] [#{session_id}] onLogon" end
       for _x <- 1..10_000 do
         spawn(fn() ->
-          fields = [
-            {@tag_account, 1234},
-            {@tag_cl_ord_id, "cod12345"},
-            {@tag_order_qty, 10},
-            {@tag_ord_type, "2"},
-            {@tag_price, 1.23},
-            {@tag_side, "1"},
-            {@tag_symbol, "SYM1"},
-            {@tag_time_in_force, "0"},
-            {@tag_transact_time, DateTime.utc_now},
-          ]
-          ExFix.send_message!(fix_session_name, "D", fields)
+          out_msg = "D"
+          |> OutMessage.new()
+          |> OutMessage.set_field(@tag_account, 1234)
+          |> OutMessage.set_field(@tag_cl_ord_id, "cod12345")
+          |> OutMessage.set_field(@tag_order_qty, 10)
+          |> OutMessage.set_field(@tag_ord_type, "2")
+          |> OutMessage.set_field(@tag_price, 1.23)
+          |> OutMessage.set_field(@tag_side, "1")
+          |> OutMessage.set_field(@tag_symbol, "SYM1")
+          |> OutMessage.set_field(@tag_time_in_force, "0")
+          |> OutMessage.set_field(@tag_transact_time, DateTime.utc_now())
+          |> ExFix.send_message!(session_id)
         end)
       end
     end
-    def on_message(fix_session_name, _msg_type, _pid, %Message{original_fix_msg:
-        original_fix_msg}) do
-      Logger.info fn -> "[fix.incoming] [#{fix_session_name}] #{original_fix_msg}" end
+    def on_message(session_id, _msg_type, %InMessage{original_fix_msg: original_fix_msg}, _env) do
+      Logger.info fn -> "[fix.incoming] [#{session_id}] #{original_fix_msg}" end
     end
-    def on_logout(fix_session_name) do
-      Logger.info fn -> "[fix.event] [#{fix_session_name}] onLogout" end
+    def on_admin_message(session_id, _msg_type, %InMessage{original_fix_msg: original_fix_msg}, _env) do
+      Logger.info fn -> "[fix.incoming] [#{session_id}] #{original_fix_msg}" end
+    end
+    def on_logout(session_id, _env) do
+      Logger.info fn -> "[fix.event] [#{session_id}] onLogout" end
     end
   end
 

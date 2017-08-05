@@ -26,7 +26,8 @@ defmodule ExFix.SessionConfig do
     validate_incoming_message: true,
     transport_mod: :gen_tcp,
     transport_options: [],
-    time_service: nil
+    time_service: nil,
+    env: %{}
 
   @type t :: %__MODULE__{}
 

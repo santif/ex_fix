@@ -13,7 +13,7 @@ defmodule ExFix.Session do
 
   @compile {:inline, process_valid_message: 4}
 
-  @type session_id :: String.t | pid()
+  @type session_id :: String.t
   @type fix_field :: {String.t, any()}
   @type session_status :: :offline | :connecting | :online | :disconnecting
   @type session_result :: {:ok, [MessageToSend.t], Session.t}
@@ -303,13 +303,13 @@ defmodule ExFix.Session do
       %Session{config: config, out_lastseq: out_lastseq} = session,
       %InMessage{poss_dup: false, fields: fields} = msg) do
     %SessionConfig{sender_comp_id: sender_comp_id,
-      target_comp_id: target_comp_id, fix_application: fix_application} = config
+      target_comp_id: target_comp_id, fix_application: fix_application, env: env} = config
     sender = :lists.keyfind(@field_sender_comp_id, 1, fields)
     target = :lists.keyfind(@field_target_comp_id, 1, fields)
     case {sender, target} do
       {{@field_sender_comp_id, ^target_comp_id}, {@field_target_comp_id, ^sender_comp_id}} ->
         ## Valid message
-        fix_application.on_message(session_name, msg_type, self(), msg)
+        fix_application.on_message(session_name, msg_type, msg, env)
         {:ok, [], %Session{session | in_lastseq: expected_seqnum,
           extra_bytes: msg.other_msgs}}
       _ ->
