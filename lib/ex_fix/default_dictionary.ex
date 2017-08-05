@@ -1,6 +1,6 @@
 defmodule ExFix.DefaultDictionary do
   @moduledoc """
-  Dictionary - default implementation
+  Simple FIX Dictionary
   """
 
   @behaviour ExFix.Dictionary

@@ -18,7 +18,7 @@ Add `ex_fix` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
-  [{:ex_fix, "~> 0.1.4"}]
+  [{:ex_fix, "~> 0.2.0"}]
 end
 ```
 
@@ -29,21 +29,50 @@ defmodule MyFixApplication do
   @behaviour ExFix.FixApplication
   require Logger
 
-  alias ExFix.Types.Message
+  alias ExFix.InMessage
+  alias ExFix.OutMessage
   alias ExFix.Parser
 
   @msg_new_order_single "D"
 
-  def on_logon(fix_session_name, session_pid) do
-    fields = []  # See examples directory
-    ExFix.send_message!(session_pid, @msg_new_order_single, fields)
+  @tag_account         1
+  @tag_cl_ord_id      11
+  @tag_order_qty      38
+  @tag_ord_type       40
+  @tag_price          44
+  @tag_side           54
+  @tag_symbol         55
+  @tag_time_in_force  59
+  @tag_transact_time  60
+
+  @value_side_buy        "1"
+  @value_ord_type_limit  "2"
+
+  def on_logon(session_id, _env) do
+    ## Buy 10 shares of SYM1 at $1.23
+
+    @msg_new_order_single
+    |> OutMessage.new()
+    |> OutMessage.set_field(@tag_account, 1234)
+    |> OutMessage.set_field(@tag_cl_ord_id, "cod12345")
+    |> OutMessage.set_field(@tag_order_qty, 10)
+    |> OutMessage.set_field(@tag_ord_type, @value_ord_type_limit)
+    |> OutMessage.set_field(@tag_price, 1.23)
+    |> OutMessage.set_field(@tag_side, @value_side_buy)
+    |> OutMessage.set_field(@tag_symbol, "SYM1")
+    |> OutMessage.set_field(@tag_transact_time, DateTime.utc_now())
+    |> ExFix.send_message!(session_id)
   end
 
-  def on_message(fix_session_name, msg_type, session_pid, %Message{} = msg) do
-    Logger.info "Msg received: #{inspect Parser.parse2(msg)}"
+  def on_message(session_id, msg_type, %InMessage{} = msg, _env) do
+    Logger.info "App msg received: \#{inspect msg = Parser.parse2(msg)}"
   end
 
-  def on_logout(_fix_session_name), do: :ok
+  def on_admin_message(session_id, msg_type, %InMessage{} = msg, _env) do
+    Logger.info "Admin msg received: \#{inspect msg = Parser.parse2(msg)}"
+  end
+
+  def on_logout(_session_id, _env), do: :ok
 end
 
 ExFix.start_session_initiator("mysession", "SENDER", "TARGET", MyFixApplication,
@@ -93,7 +122,7 @@ communication time between an external FIX initiator and the Erlang VM.
 In addition, there are fewer dependencies and number of possible failure points.
 
 - HW: Laptop Dell Latitude E5570 Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz 16 GB RAM
-- Elixir 1.4.5 / Erlang 19.2
+- Elixir 1.4.5 / Erlang 20.0
 - Parser benchmark: Execution Report with 155 bytes.
 - Serializer benchmark: New Order Single with 115 bytes.
 
@@ -102,11 +131,11 @@ $ mix bench -d 2
 ...
 ## ExFixBench
 benchmark name                         iterations   average time
-Parse - Stage 1 (without validation)       500000   6.41 µs/op
-Parse - Stage 1                            500000   8.12 µs/op
-Serialize                                  500000   11.76 µs/op
-Parse - Full Msg (without validation)      500000   14.86 µs/op
-Parse - Full Msg                           200000   16.55 µs/op
+Parse - Stage 1 (without validation)      1000000   5.79 µs/op
+Parse - Stage 1                            500000   7.22 µs/op
+Serialize                                  500000   11.87 µs/op
+Parse - Full Msg (without validation)      500000   14.71 µs/op
+Parse - Full Msg                           200000   16.50 µs/op
 ```
 
 ## Maintainer

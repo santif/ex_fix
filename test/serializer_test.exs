@@ -1,7 +1,7 @@
 defmodule ExFix.SerializerTest do
   use ExUnit.Case
 
-  alias ExFix.Types.MessageToSend
+  alias ExFix.Session.MessageToSend
   alias ExFix.Serializer
 
   import ExFix.TestHelper

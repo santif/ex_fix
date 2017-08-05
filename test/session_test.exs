@@ -2,9 +2,10 @@ defmodule ExFix.SessionTest do
   use ExUnit.Case
   import ExFix.TestHelper
 
-  alias ExFix.Types.MessageToSend
-  alias ExFix.Types.SessionConfig
+  alias ExFix.SessionConfig
+  alias ExFix.Session.MessageToSend
   alias ExFix.Session
+  alias ExFix.OutMessage
   alias ExFix.TestHelper.FixDummyApplication
 
   @msg_type_logon             "A"
@@ -20,11 +21,11 @@ defmodule ExFix.SessionTest do
   @msg_type_execution_report  "8"
 
   # App fields used in tests
-  @field_account 1
-  @field_begin_seq_no 7
-  @field_end_seq_no 16
-  @field_new_seq_no 36
-  @field_gap_fill 123
+  @field_account        1
+  @field_begin_seq_no   7
+  @field_end_seq_no    16
+  @field_new_seq_no    36
+  @field_gap_fill     123
 
   @t0        Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 2}}, "Etc/UTC")
   @t_plus_1  Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 3}}, "Etc/UTC")
@@ -537,11 +538,25 @@ defmodule ExFix.SessionTest do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 1, out_lastseq: 1}
 
-    fields = [{"1", 100}, {"55", "ABC1"}, {"44", 4.56}]
-    {:ok, _, session} = Session.send_message(session, "D", [{1, "acc1"}] ++ fields) # seqnum 2
-    {:ok, _, session} = Session.send_message(session, "D", [{1, "acc1"}] ++ fields) # seqnum 3
-    {:ok, _, session} = Session.send_message(session, "0", []) # seqnum 4 (heartbeat)
-    {:ok, _, session} = Session.send_message(session, "D", [{1, "acc1"}] ++ fields) # seqnum 5
+    fields = [{"55", "ABC1"}, {"44", 4.56}]
+
+    out_msg = OutMessage.new("D")
+    |> OutMessage.set_field(@field_account, "acc1")
+    |> OutMessage.set_fields(fields)
+    {:ok, _, session} = Session.send_message(session, out_msg) # seqnum 2
+
+    out_msg = OutMessage.new("D")
+    |> OutMessage.set_field(@field_account, "acc2")
+    |> OutMessage.set_fields(fields)
+    {:ok, _, session} = Session.send_message(session, out_msg) # seqnum 3
+
+    out_msg = OutMessage.new("0")
+    {:ok, _, session} = Session.send_message(session, out_msg) # seqnum 4 (heartbeat)
+
+    out_msg = OutMessage.new("D")
+    |> OutMessage.set_field(@field_account, "acc3")
+    |> OutMessage.set_fields(fields)
+    {:ok, _, session} = Session.send_message(session, out_msg) # seqnum 5
 
     seq = 2
     incoming_data = build_message(@msg_type_resend_request, seq, "SELLSIDE", "BUYSIDE", @t_plus_1,

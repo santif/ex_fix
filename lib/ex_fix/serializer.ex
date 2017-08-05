@@ -3,15 +3,15 @@ defmodule ExFix.Serializer do
   FIX message serialization
   """
 
-  alias ExFix.Types.MessageToSend
+  alias ExFix.Session.MessageToSend
   alias ExFix.DateUtil
 
-  @tag_msg_type           "35"
-  @tag_seqnum             "34"
-  @tag_sender_comp_id     "49"
-  @tag_sending_time       "52"
-  @tag_target_comp_id     "56"
-  @tag_poss_dup_flag      "43"
+  @tag_msg_type            "35"
+  @tag_seqnum              "34"
+  @tag_sender_comp_id      "49"
+  @tag_sending_time        "52"
+  @tag_target_comp_id      "56"
+  @tag_poss_dup_flag       "43"
   @tag_orig_sending_time  "122"
 
   @compile {:inline, calculate_checksum: 2}

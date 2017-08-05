@@ -3,33 +3,40 @@ ExUnit.start()
 defmodule ExFix.TestHelper do
 
   alias ExFix.Serializer
-  alias ExFix.Types.MessageToSend
+  alias ExFix.Session.MessageToSend
   alias ExFix.DefaultDictionary, as: Dictionary
 
   defmodule FixDummyApplication do
     @behaviour ExFix.FixApplication
 
-    def on_logon(fix_session, pid) do
-      send(pid, {:logon, fix_session})
+    def on_logon(session_id, env) do
+      send(self(), {:logon, session_id, env})
     end
 
-    def on_message(fix_session, msg_type, pid, msg) do
-      send(pid, {:msg, fix_session, msg_type, msg})
+    def on_message(session_id, msg_type, msg, env) do
+      send(self(), {:msg, session_id, msg_type, msg, env})
     end
 
-    def on_logout(_fix_session), do: :ok
+    def on_admin_message(session_id, msg_type, msg, env) do
+      send(self(), {:admin_msg, session_id, msg_type, msg, env})
+    end
+
+    def on_logout(_session_id, _env), do: :ok
   end
 
   defmodule FixEmptyApplication do
     @behaviour ExFix.FixApplication
 
-    def on_logon(_fix_session, _pid) do
+    def on_logon(_session_id, _env) do
     end
 
-    def on_message(_fix_session, _msg_type, _pid, _msg) do
+    def on_message(_session_id, _msg_type, _msg, _env) do
     end
 
-    def on_logout(_fix_session), do: :ok
+    def on_admin_message(_session_id, _msg_type, _msg, _env) do
+    end
+
+    def on_logout(_session_id, env), do: :ok
   end
 
   defmodule TestTransport do

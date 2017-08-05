@@ -3,7 +3,7 @@ defmodule ExFix.Parser do
   FIX message parser
   """
 
-  alias ExFix.Types.Message
+  alias ExFix.InMessage
 
   @compile {:inline, parse_field: 1}
   @compile {:inline, parse_expected_seqnum: 6}
@@ -14,7 +14,7 @@ defmodule ExFix.Parser do
   Parse full message
   """
   def parse(data, dictionary, expected_seqnum \\ nil, validate \\ true) do
-    with %Message{valid: true} = msg1 <- parse1(data, dictionary, expected_seqnum, validate),
+    with %InMessage{valid: true} = msg1 <- parse1(data, dictionary, expected_seqnum, validate),
          msg2 <- parse2(msg1) do
       msg2
     end
@@ -39,40 +39,40 @@ defmodule ExFix.Parser do
             parse_message(rest1, expected_seqnum, orig_msg, dictionary, other_msgs)
 
           false ->
-            %Message{valid: false, msg_type: nil, seqnum: nil,
+            %InMessage{valid: false, msg_type: nil, seqnum: nil,
               other_msgs: other_msgs, original_fix_msg: orig_msg,
               error_reason: :garbled}
         end
 
       _ ->
         orig_msg = << "8=FIXT.1.1", @soh, "9=", rest::binary() >>
-        %Message{valid: false, msg_type: nil, seqnum: nil, other_msgs: orig_msg,
+        %InMessage{valid: false, msg_type: nil, seqnum: nil, other_msgs: orig_msg,
           original_fix_msg: orig_msg, error_reason: :garbled}
     end
   end
   def parse1(<<"8=", _rest::binary()>> = orig_msg, _dictionary, _expected_seqnum, _validate) do
-    %Message{valid: false, msg_type: nil, seqnum: nil,
+    %InMessage{valid: false, msg_type: nil, seqnum: nil,
       other_msgs: "", original_fix_msg: orig_msg,
       error_reason: :begin_string_error}
   end
   def parse1(data, _dictionary, _expected_seqnum, _validate) do
-    %Message{valid: false, msg_type: nil, seqnum: nil, other_msgs: "",
+    %InMessage{valid: false, msg_type: nil, seqnum: nil, other_msgs: "",
       original_fix_msg: data, error_reason: :garbled}
   end
 
   @doc """
   Parse rest of the message
   """
-  def parse2(%Message{valid: true, complete: false, fields: fields,
+  def parse2(%InMessage{valid: true, complete: false, fields: fields,
       rest_msg: rest} = msg) do
     case do_parse(rest, nil, []) do
       {:ok, nil, fields2, ""} ->
-        %Message{msg | complete: true, fields: fields ++ fields2, rest_msg: ""}
+        %InMessage{msg | complete: true, fields: fields ++ fields2, rest_msg: ""}
       {:error, :invalid_rawdata, nil, fields2} ->
-        %Message{msg | valid: false, error_reason: :garbled, fields: fields ++ fields2, rest_msg: ""}
+        %InMessage{msg | valid: false, error_reason: :garbled, fields: fields ++ fields2, rest_msg: ""}
     end
   end
-  def parse2(%Message{valid: true, complete: true} = msg) do
+  def parse2(%InMessage{valid: true, complete: true} = msg) do
     msg
   end
 
@@ -96,7 +96,7 @@ defmodule ExFix.Parser do
         end
 
       _ ->
-        %Message{valid: false, msg_type: nil, seqnum: nil, other_msgs: other_msgs,
+        %InMessage{valid: false, msg_type: nil, seqnum: nil, other_msgs: other_msgs,
           original_fix_msg: orig_msg, error_reason: :garbled}
     end
   end
@@ -135,13 +135,13 @@ defmodule ExFix.Parser do
     case do_parse(data, subject_field, [{"34", "#{seqnum}"}, {"35", msg_type}]) do
       {:ok, sub, fields, rest0} ->
         poss_dup = :lists.keyfind("43", 1, fields) == {"43", "Y"}
-        %Message{valid: true, complete: rest0 == "", msg_type: msg_type,
+        %InMessage{valid: true, complete: rest0 == "", msg_type: msg_type,
           subject: sub, poss_dup: poss_dup, fields: fields,
           seqnum: seqnum, rest_msg: rest0,
           original_fix_msg: orig_msg, other_msgs: other_msgs}
       {:error, :invalid_rawdata, sub, fields} ->
         poss_dup = :lists.keyfind("43", 1, fields) == {"43", "Y"}
-        %Message{valid: false, complete: true, msg_type: msg_type,
+        %InMessage{valid: false, complete: true, msg_type: msg_type,
           subject: sub, poss_dup: poss_dup, fields: fields,
           seqnum: seqnum, rest_msg: "", error_reason: :garbled,
           original_fix_msg: orig_msg, other_msgs: other_msgs}
@@ -155,7 +155,7 @@ defmodule ExFix.Parser do
           {"43", "Y"} -> true
           _ -> false
         end
-        %Message{valid: false, msg_type: msg_type, seqnum: seqnum,
+        %InMessage{valid: false, msg_type: msg_type, seqnum: seqnum,
           subject: sub, fields: fields, rest_msg: rest0,
           other_msgs: other_msgs, original_fix_msg: orig_msg,
           error_reason: :unexpected_seqnum}
@@ -164,7 +164,7 @@ defmodule ExFix.Parser do
           {"43", "Y"} -> true
           _ -> false
         end
-        %Message{valid: false, complete: true, msg_type: msg_type,
+        %InMessage{valid: false, complete: true, msg_type: msg_type,
           subject: sub, poss_dup: poss_dup, fields: fields,
           seqnum: seqnum, rest_msg: "", error_reason: :garbled,
           original_fix_msg: orig_msg, other_msgs: other_msgs}

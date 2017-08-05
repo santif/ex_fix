@@ -1,23 +1,53 @@
 defmodule ExFix.FixApplication do
   @moduledoc """
-  FIX application behaviour. Declare callbacks to process FIX messages and events
+  FIX application behaviour. Declare callbacks to process received FIX messages
+  and session events.
   """
 
-  alias ExFix.Types.Message
-
-  @doc """
-  Logon callback
-  """
-  @callback on_logon(session_name :: String.t, pid :: pid()) :: any()
+  alias ExFix.InMessage
+  alias ExFix.Session
 
   @doc """
-  Message callback
+  Callback - FIX message received (application level).
+
+  This function receives:
+  - session id (String or PID), example: "simulator"
+  - message type (String)
+    see [here](http://www.onixs.biz/fix-dictionary/5.0.SP2/msgs_by_msg_type.html)
+    for a complete list of FIX 5.0 SP2 message types.
+  - msg - InMessage struct with message. If `msg.complete == false`, it is needed to call:
+    ```
+    msg = ExFix.Parser.parse2(msg)
+    ```
+  - env - Map sent to `ExFix.start_session_initiator()`.
   """
-  @callback on_message(session_name :: String.t, msg_type :: String.t,
-    pid :: pid(), msg :: Message.t) :: any()
+  @callback on_app_message(
+    session_id :: Session.session_id,
+    msg_type :: String.t,
+    msg :: InMessage.t,
+    env :: map()) :: none()
 
   @doc """
-  Logout callback
+  FIX message received (session level). Same arguments of `on_message()`.
   """
-  @callback on_logout(session_name :: String.t) :: any()
+  @callback on_admin_message(
+    session_id :: Session.session_id,
+    msg_type :: String.t,
+    msg :: InMessage.t,
+    env :: map()) :: none()
+
+  @doc """
+  Called after a Logon message is received from counterparty
+  """
+  @callback on_logon(
+    session_id :: Session.session_id,
+    env :: map()) :: none()
+
+  @doc """
+  Called after a Logout message is received from counterparty or after a
+  disconnection, which occurs first.
+  """
+  @callback on_logout(
+    session_id :: Session.session_id,
+    env :: map()) :: none()
 end

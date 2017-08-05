@@ -8,7 +8,7 @@ defmodule ExFix.DefaultSessionRegistry do
   require Logger
   alias ExFix.SessionWorker
 
-  @ets_table :"ex_fix_registry"
+  @ets_table :ex_fix_registry
 
   defmodule State do
     @moduledoc false

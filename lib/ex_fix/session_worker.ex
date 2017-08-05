@@ -6,7 +6,8 @@ defmodule ExFix.SessionWorker do
   require Logger
   use GenServer
   alias ExFix.Session
-  alias ExFix.Types.SessionConfig
+  alias ExFix.SessionConfig
+  alias ExFix.OutMessage
   alias ExFix.Serializer
   alias ExFix.SessionTimer
 
@@ -34,10 +35,13 @@ defmodule ExFix.SessionWorker do
     GenServer.start_link(__MODULE__, [config, registry], name: name)
   end
 
-  def send_message(fix_session, msg_type, fields) when is_binary(fix_session) do
+  def send_message!(fix_session, out_message) when is_binary(fix_session) do
     # name = {:via, ExFix.Registry, {:ex_fix_session, fix_session}}
     name = :"ex_fix_session_#{fix_session}"
-    GenServer.call(name, {:send_message, msg_type, fields})
+    GenServer.call(name, {:send_message, out_message})
+  end
+  def send_message!(fix_session, out_message) when is_pid(fix_session) do
+    GenServer.call(fix_session, {:send_message, out_message})
   end
 
   def stop(fix_session) do
@@ -92,9 +96,9 @@ defmodule ExFix.SessionWorker do
     {:stop, :closed, state}
   end
 
-  def handle_call({:send_message, msg_type, fields}, _from, %State{session: session} = state) do
-    {:ok, msgs, session} = Session.send_message(session, msg_type, fields)
-    do_send_messages(msgs, state)
+  def handle_call({:send_message, %OutMessage{} = msg}, _from, %State{session: session} = state) do
+    {:ok, msgs_to_send, session} = Session.send_message(session, msg)
+    do_send_messages(msgs_to_send, state)
     {:reply, :ok, %State{state | session: session}}
   end
 
