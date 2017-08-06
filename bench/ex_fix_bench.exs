@@ -6,6 +6,12 @@ defmodule ExFixBench do
   alias ExFix.OutMessage
   alias ExFix.Parser
 
+  @tag_account           "1"
+  @tag_cl_ord_id        "11"
+  @tag_order_qty        "38"
+  @tag_price            "44"
+  @tag_side             "54"
+  @tag_symbol           "55"
   @dictionary ExFix.DefaultDictionary
 
   bench "Serialize", [msg: get_message_to_send(), now: get_sending_time()] do
@@ -48,12 +54,12 @@ defmodule ExFixBench do
     msg_type = "D"
     out_message = msg_type
     |> OutMessage.new()
-    |> OutMessage.set_field(1, "531")
-    |> OutMessage.set_field(11, "99")
-    |> OutMessage.set_field(38, 5)
-    |> OutMessage.set_field(44, 1.2)
-    |> OutMessage.set_field(54, 1)
-    |> OutMessage.set_field(55, "ABC")
+    |> OutMessage.set_field(@tag_account, "531")
+    |> OutMessage.set_field(@tag_cl_ord_id, "99")
+    |> OutMessage.set_field(@tag_order_qty, 5)
+    |> OutMessage.set_field(@tag_price, 1.2)
+    |> OutMessage.set_field(@tag_side, 1)
+    |> OutMessage.set_field(@tag_symbol, "SYM")
     %MessageToSend{seqnum: 10, msg_type: msg_type, sender: "SENDER",
       orig_sending_time: DateTime.utc_now(), target: "TARGET",
       body: out_message.fields}

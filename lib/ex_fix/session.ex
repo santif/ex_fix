@@ -57,13 +57,13 @@ defmodule ExFix.Session do
   ##
 
   # InMessage types
-  @msg_type_logon                 "A"
-  @msg_type_heartbeat             "0"
-  @msg_type_test_request          "1"
-  @msg_type_resend_request        "2"
-  @msg_type_reject                "3"
-  @msg_type_sequence_reset        "4"
-  @msg_type_logout                "5"
+  @msg_type_logon                  "A"
+  @msg_type_heartbeat              "0"
+  @msg_type_test_request           "1"
+  @msg_type_resend_request         "2"
+  @msg_type_reject                 "3"
+  @msg_type_sequence_reset         "4"
+  @msg_type_logout                 "5"
 
   # Fields
   @field_poss_dup_flag            "43"

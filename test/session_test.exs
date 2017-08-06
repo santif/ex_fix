@@ -21,11 +21,11 @@ defmodule ExFix.SessionTest do
   @msg_type_execution_report  "8"
 
   # App fields used in tests
-  @field_account        1
-  @field_begin_seq_no   7
-  @field_end_seq_no    16
-  @field_new_seq_no    36
-  @field_gap_fill     123
+  @field_account        "1"
+  @field_begin_seq_no   "7"
+  @field_end_seq_no    "16"
+  @field_new_seq_no    "36"
+  @field_gap_fill     "123"
 
   @t0        Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 2}}, "Etc/UTC")
   @t_plus_1  Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 3}}, "Etc/UTC")
@@ -757,6 +757,7 @@ defmodule ExFix.SessionTest do
     assert length(msgs_to_send) == 0
   end
 
+  @tag :resend
   test "Receive SeqReset (reset) with NewSeqNum < than expected seq num (p. 57)", %{config: cfg} do
     ## 1. Accept the Sequence Reset (Reset) msg without regards to its MsgSeqNum
     ## 2. Send Reject (session level) msg with SessionRejectReason = "Value is incorrect (out of range) for this tag"

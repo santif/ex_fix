@@ -24,18 +24,43 @@ defmodule ExFix.InMessage do
   end
 
   def get_field(_msg, _field, dictionary \\ nil)
-  def get_field(%InMessage{fields: fields}, field, dictionary) when is_integer(field) do
-    case dictionary do
-      nil -> :lists.keyfind("#{field}", 1, fields)
-      dict -> dict.get_field(fields, field)
+  def get_field(%InMessage{fields: fields}, field, nil) do
+    tuple = case field do
+      b when is_binary(b) ->
+        :lists.keyfind(b, 1, fields)
+      i when is_integer(i) ->
+        :lists.keyfind("#{i}", 1, fields)
+    end
+    case tuple do
+      {_key, value} ->
+        value
+      false ->
+        nil
     end
   end
-  def get_field(%InMessage{fields: fields}, field, dictionary) when is_binary(field) do
-    case dictionary do
-      nil -> :lists.keyfind(field, 1, fields)
-      dict -> dict.get_field(fields, field)
+  def get_field(%InMessage{fields: fields}, field, dictionary) do
+    dictionary.get_field(fields, field)
+  end
+
+  def get_fields(_msg, _field, dictionary \\ nil)
+  def get_fields(%InMessage{fields: fields}, field, nil) do
+    tuple = case field do
+      b when is_binary(b) ->
+        :lists.keyfind(b, 1, fields)
+      i when is_integer(i) ->
+        :lists.keyfind("#{i}", 1, fields)
+    end
+    case tuple do
+      {_key, value} ->
+        value
+      false ->
+        nil
     end
   end
+  def get_fields(%InMessage{fields: fields}, field, dictionary) do
+    dictionary.get_fields(fields, field)
+  end
+
 
   ## TODO getter functions
   ## - get_string_field / get_int_field / etc

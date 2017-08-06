@@ -11,15 +11,15 @@ defmodule ExFix.ExFixTest do
 
   @session_registry Application.get_env(:ex_fix, :session_registry, ExFix.DefaultSessionRegistry)
 
-  @tag_account         1
-  @tag_cl_ord_id      11
-  @tag_order_qty      38
-  @tag_ord_type       40
-  @tag_price          44
-  @tag_side           54
-  @tag_symbol         55
-  @tag_time_in_force  59
-  @tag_transact_time  60
+  @tag_account         "1"
+  @tag_cl_ord_id      "11"
+  @tag_order_qty      "38"
+  @tag_ord_type       "40"
+  @tag_price          "44"
+  @tag_side           "54"
+  @tag_symbol         "55"
+  @tag_time_in_force  "59"
+  @tag_transact_time  "60"
 
   test "Session initiator simple test" do
     ExFix.start_session_initiator("session1", "SENDER", "TARGET", FixEmptyApplication,

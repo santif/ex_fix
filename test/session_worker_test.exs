@@ -12,15 +12,15 @@ defmodule ExFix.SessionWorkerTest do
   alias ExFix.TestHelper.TestTransport
   alias ExFix.TestHelper.TestSessionRegistry
 
-  @tag_account         1
-  @tag_cl_ord_id      11
-  @tag_order_qty      38
-  @tag_ord_type       40
-  @tag_price          44
-  @tag_side           54
-  @tag_symbol         55
-  @tag_time_in_force  59
-  @tag_transact_time  60
+  @tag_account         "1"
+  @tag_cl_ord_id      "11"
+  @tag_order_qty      "38"
+  @tag_ord_type       "40"
+  @tag_price          "44"
+  @tag_side           "54"
+  @tag_symbol         "55"
+  @tag_time_in_force  "59"
+  @tag_transact_time  "60"
 
   setup do
     {:ok, _} = TestSessionRegistry.start_link()

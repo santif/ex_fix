@@ -127,13 +127,22 @@ defmodule ExFix.TestHelper do
     end
   end
 
+  defmodule InMessageTestDict do
+    @behaviour ExFix.Dictionary
+
+    def field_info(value) when is_binary(value), do: {value, :string}
+
+    def subject("8"), do: "1"
+    def subject(_), do: nil
+  end
+
   @doc """
   Builds test message
   """
   def build_message(msg_type, seqnum, sender, target, now, fields \\ [],
       orig_sending_time \\ nil, resend \\ false) do
     fields = for {field_name, value} <- fields do
-      {field, _} = Dictionary.tag_info(field_name)
+      {field, _} = Dictionary.field_info(field_name)
       {field, value}
     end
     Serializer.serialize(%MessageToSend{seqnum: seqnum,

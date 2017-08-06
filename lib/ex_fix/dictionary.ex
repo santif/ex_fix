@@ -3,10 +3,20 @@ defmodule ExFix.Dictionary do
   FIX dictionary behaviour
   """
 
-  @type tag_type() :: :string | :datetime | :number | :boolean
-  @type tag_info() :: {tag_name :: String.t, tag_type :: tag_type()}
-  @type subject_tag() :: String.t | {String.t, String.t} | nil
+  @type field_type :: :string | :datetime | :number | :boolean
+  @type field_info :: {field_name :: String.t, field_type :: field_type}
+  @type subject_field :: String.t | {String.t, String.t} | nil
 
-  @callback tag_info(tag :: String.t) :: tag_info()
-  @callback subject(msg_type :: String.t) :: subject_tag()
+  @doc """
+  """
+  @callback field_info(tag :: String.t) :: field_info()
+
+  @doc """
+  """
+  @callback subject(msg_type :: String.t) :: subject_field()
+
+  # @doc """
+  # """
+  # @callback get_field(msg_type)
+
 end

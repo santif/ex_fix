@@ -17,7 +17,6 @@ defmodule ExFix.ParserTest do
     assert fix_msg.subject == "1557"
   end
 
-  @tag :msg
   test "Parse message - full" do
     data = msg("8=FIXT.1.1|9=267|35=8|34=12345|49=MARKET|52=20161007-16:28:50.802" <>
       "|56=INITIATOR|1=1557|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050" <>

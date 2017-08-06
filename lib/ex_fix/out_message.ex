@@ -24,9 +24,6 @@ defmodule ExFix.OutMessage do
   def set_field(%OutMessage{fields: fields} = msg, field, value) when is_binary(field) do
     %OutMessage{msg | fields: fields ++ [{field, value}]}
   end
-  def set_field(%OutMessage{fields: fields} = msg, field, value) when is_integer(field) do
-    %OutMessage{msg | fields: fields ++ [{"#{field}", value}]}
-  end
 
   @doc """
 
