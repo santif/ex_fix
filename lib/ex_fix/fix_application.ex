@@ -22,7 +22,7 @@ defmodule ExFix.FixApplication do
   - env - Map sent to `ExFix.start_session_initiator()`.
   """
   @callback on_app_message(
-    session_id :: Session.session_id,
+    session_name :: Session.session_name,
     msg_type :: String.t,
     msg :: InMessage.t,
     env :: map()) :: none()
@@ -30,8 +30,8 @@ defmodule ExFix.FixApplication do
   @doc """
   FIX message received (session level). Same arguments of `on_message()`.
   """
-  @callback on_admin_message(
-    session_id :: Session.session_id,
+  @callback on_session_message(
+    session_name :: Session.session_name,
     msg_type :: String.t,
     msg :: InMessage.t,
     env :: map()) :: none()
@@ -40,7 +40,7 @@ defmodule ExFix.FixApplication do
   Called after a Logon message is received from counterparty
   """
   @callback on_logon(
-    session_id :: Session.session_id,
+    session_name :: Session.session_name,
     env :: map()) :: none()
 
   @doc """
@@ -48,6 +48,6 @@ defmodule ExFix.FixApplication do
   disconnection, which occurs first.
   """
   @callback on_logout(
-    session_id :: Session.session_id,
+    session_name :: Session.session_name,
     env :: map()) :: none()
 end

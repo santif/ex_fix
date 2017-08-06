@@ -29,7 +29,7 @@ defmodule ExFix do
     @value_side_buy        "1"
     @value_ord_type_limit  "2"
 
-    def on_logon(session_id, _env) do
+    def on_logon(session_name, _env) do
       \#\# Buy 10 shares of SYM1 for $1.23 per share
 
       @msg_new_order_single
@@ -42,15 +42,15 @@ defmodule ExFix do
       |> OutMessage.set_field(@tag_side, @value_side_buy)
       |> OutMessage.set_field(@tag_symbol, "SYM1")
       |> OutMessage.set_field(@tag_transact_time, DateTime.utc_now())
-      |> ExFix.send_message!(session_id)
+      |> ExFix.send_message!(session_name)
     end
 
-    def on_message(session_id, msg_type, %InMessage{} = msg, _env) do
+    def on_message(session_name, msg_type, %InMessage{} = msg, _env) do
       Logger.info "App msg received: \#{inspect Parser.parse2(msg)}"
     end
 
-    def on_admin_message(session_id, msg_type, %InMessage{} = msg, _env) do
-      Logger.info "Admin msg received: \#{inspect Parser.parse2(msg)}"
+    def on_session_message(session_name, msg_type, %InMessage{} = msg, _env) do
+      Logger.info "Session msg received: \#{inspect Parser.parse2(msg)}"
     end
 
     def on_logout(_session_id, _env), do: :ok
@@ -111,17 +111,17 @@ defmodule ExFix do
   @doc """
   Send FIX message to a session
   """
-  @spec send_message!(OutMessage.t, Session.session_id) :: :ok | no_return
-  def send_message!(out_message, session_id) do
-    SessionWorker.send_message!(session_id, out_message)
+  @spec send_message!(OutMessage.t, Session.session_name) :: :ok | no_return
+  def send_message!(out_message, session_name) do
+    SessionWorker.send_message!(session_name, out_message)
   end
 
   @doc """
   Stop FIX session
   """
-  @spec stop_session(Session.session_id, SessionRegistry | nil) :: :ok | no_return
-  def stop_session(session_id, registry \\ nil) do
+  @spec stop_session(Session.session_name, SessionRegistry | nil) :: :ok | no_return
+  def stop_session(session_name, registry \\ nil) do
     session_registry = registry || @session_registry
-    session_registry.stop_session(session_id)
+    session_registry.stop_session(session_name)
   end
 end

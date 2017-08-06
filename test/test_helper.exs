@@ -9,16 +9,16 @@ defmodule ExFix.TestHelper do
   defmodule FixDummyApplication do
     @behaviour ExFix.FixApplication
 
-    def on_logon(session_id, env) do
-      send(self(), {:logon, session_id, env})
+    def on_logon(session_name, env) do
+      send(self(), {:logon, session_name, env})
     end
 
-    def on_message(session_id, msg_type, msg, env) do
-      send(self(), {:msg, session_id, msg_type, msg, env})
+    def on_message(session_name, msg_type, msg, env) do
+      send(self(), {:msg, session_name, msg_type, msg, env})
     end
 
-    def on_admin_message(session_id, msg_type, msg, env) do
-      send(self(), {:admin_msg, session_id, msg_type, msg, env})
+    def on_session_message(session_name, msg_type, msg, env) do
+      send(self(), {:admin_msg, session_name, msg_type, msg, env})
     end
 
     def on_logout(_session_id, _env), do: :ok
@@ -33,7 +33,7 @@ defmodule ExFix.TestHelper do
     def on_message(_session_id, _msg_type, _msg, _env) do
     end
 
-    def on_admin_message(_session_id, _msg_type, _msg, _env) do
+    def on_session_message(_session_id, _msg_type, _msg, _env) do
     end
 
     def on_logout(_session_id, env), do: :ok
