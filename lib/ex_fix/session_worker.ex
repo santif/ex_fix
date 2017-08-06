@@ -40,9 +40,6 @@ defmodule ExFix.SessionWorker do
     name = :"ex_fix_session_#{fix_session}"
     GenServer.call(name, {:send_message, out_message})
   end
-  def send_message!(fix_session, out_message) when is_pid(fix_session) do
-    GenServer.call(fix_session, {:send_message, out_message})
-  end
 
   def stop(fix_session) do
     # name = {:via, ExFix.Registry, {:ex_fix_session, fix_session}}
