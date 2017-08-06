@@ -3,7 +3,7 @@ defmodule ExFix.Mixfile do
 
   def project do
     [app: :ex_fix,
-     version: "0.2.0",
+     version: "0.2.1",
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -36,7 +36,7 @@ defmodule ExFix.Mixfile do
   defp deps do
     [{:calendar, "~> 0.17.3"},
      {:benchfella, "~> 0.3.0"},
-     {:ex_doc, "~> 0.14", only: :dev, runtime: false},
+    #  {:ex_doc, "~> 0.14", only: :dev, runtime: false},
      {:excoveralls, "~> 0.7", only: :test},
      {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
      {:credo, "~> 0.8", only: [:dev, :test], runtime: false}]
