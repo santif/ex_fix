@@ -123,7 +123,7 @@ communication time between an external FIX initiator and the Erlang VM.
 In addition, there are fewer dependencies and number of possible failure points.
 
 - HW: Laptop Dell Latitude E5570 Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz 16 GB RAM
-- Elixir 1.4.5 / Erlang 20.0
+- Elixir 1.5.1 / Erlang 20.0
 - Parser benchmark: Execution Report with 155 bytes.
 - Serializer benchmark: New Order Single with 115 bytes.
 
