@@ -49,7 +49,7 @@ defmodule MyFixApplication do
   @value_ord_type_limit  "2"
 
   def on_logon(session_id, _env) do
-    ## Buy 10 shares of SYM1 at $1.23
+    ## Buy 10 shares of SYM1 for $1.23 per share
 
     @msg_new_order_single
     |> OutMessage.new()
