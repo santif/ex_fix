@@ -13,16 +13,17 @@ defmodule ExFixBench do
     def subject(_), do: nil
   end
 
-  @tag_account           "1"
-  @tag_cl_ord_id        "11"
-  @tag_order_qty        "38"
-  @tag_price            "44"
-  @tag_side             "54"
-  @tag_symbol           "55"
+  @field_account           "1"
+  @field_cl_ord_id        "11"
+  @field_order_qty        "38"
+  @field_price            "44"
+  @field_side             "54"
+  @field_symbol           "55"
+
   @dictionary ExFixBench.MyDictionary
 
-  bench "Serialize", [msg: get_message_to_send(), now: get_sending_time()] do
-    Serializer.serialize(msg, now)
+  bench "Serialize", [data: get_serialize_data(), now: get_sending_time()] do
+    Serializer.serialize(data, now)
   end
 
   bench "Parse - Stage 1", [data: get_parse_data()] do
@@ -57,17 +58,17 @@ defmodule ExFixBench do
     :binary.replace(str_data, "|", << 1 >>, [:global])
   end
 
-  defp get_message_to_send() do
-    msg_type = "D"
-    out_message = msg_type
+  def get_serialize_data() do
+    out_message = "D"
     |> OutMessage.new()
-    |> OutMessage.set_field(@tag_account, "531")
-    |> OutMessage.set_field(@tag_cl_ord_id, "99")
-    |> OutMessage.set_field(@tag_order_qty, 5)
-    |> OutMessage.set_field(@tag_price, 1.2)
-    |> OutMessage.set_field(@tag_side, 1)
-    |> OutMessage.set_field(@tag_symbol, "SYM")
-    %MessageToSend{seqnum: 10, msg_type: msg_type, sender: "SENDER",
+    |> OutMessage.set_field(@field_account, "531")
+    |> OutMessage.set_field(@field_cl_ord_id, "99")
+    |> OutMessage.set_field(@field_order_qty, 5)
+    |> OutMessage.set_field(@field_price, 1.2)
+    |> OutMessage.set_field(@field_side, 1)
+    |> OutMessage.set_field(@field_symbol, "SYM")
+
+    %MessageToSend{seqnum: 10, msg_type: out_message.msg_type, sender: "SENDER",
       orig_sending_time: DateTime.utc_now(), target: "TARGET",
       body: out_message.fields}
   end
