@@ -46,11 +46,11 @@ defmodule ExFix do
     end
 
     def on_message(session_id, msg_type, %InMessage{} = msg, _env) do
-      Logger.info "App msg received: \#{inspect msg = Parser.parse2(msg)}"
+      Logger.info "App msg received: \#{inspect Parser.parse2(msg)}"
     end
 
     def on_admin_message(session_id, msg_type, %InMessage{} = msg, _env) do
-      Logger.info "Admin msg received: \#{inspect msg = Parser.parse2(msg)}"
+      Logger.info "Admin msg received: \#{inspect Parser.parse2(msg)}"
     end
 
     def on_logout(_session_id, _env), do: :ok
