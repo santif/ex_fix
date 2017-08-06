@@ -6,13 +6,20 @@ defmodule ExFixBench do
   alias ExFix.OutMessage
   alias ExFix.Parser
 
+  defmodule MyDictionary do
+    @behaviour ExFix.Dictionary
+
+    def subject("8"), do: "1"  ## 8 (ExecutionReport) subject: 1 (Account)
+    def subject(_), do: nil
+  end
+
   @tag_account           "1"
   @tag_cl_ord_id        "11"
   @tag_order_qty        "38"
   @tag_price            "44"
   @tag_side             "54"
   @tag_symbol           "55"
-  @dictionary ExFix.DefaultDictionary
+  @dictionary ExFixBench.MyDictionary
 
   bench "Serialize", [msg: get_message_to_send(), now: get_sending_time()] do
     Serializer.serialize(msg, now)

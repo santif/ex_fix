@@ -3,6 +3,13 @@ defmodule ExFixInitiator do
   Documentation for ExFixInitiator.
   """
 
+  defmodule MyDictionary do
+    @behaviour ExFix.Dictionary
+
+    def subject("8"), do: "1"  ## 8 (ExecutionReport) subject: 1 (Account)
+    def subject(_), do: nil
+  end
+
   defmodule SessionHandler do
     @moduledoc false
     require Logger
@@ -10,6 +17,7 @@ defmodule ExFixInitiator do
 
     alias ExFix.OutMessage
     alias ExFix.InMessage
+    alias ExFixInitiator.MyDictionary
 
     @msg_type_new_order_single "D"
 
@@ -55,6 +63,6 @@ defmodule ExFixInitiator do
 
   def start() do
     ExFix.start_session_initiator("simulator", "BUY", "SELL",
-      SessionHandler, transport_mod: :ssl)
+      SessionHandler, dictionary: MyDictionary, transport_mod: :ssl)
   end
 end

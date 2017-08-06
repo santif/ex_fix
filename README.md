@@ -107,12 +107,12 @@ This is a work in progress. Here is a list of some pending tasks, PRs are welcom
 - Documentation and more examples
 - Session Logon with `ResetSeqNumFlag=N`.
 - Multiple hosts configuration, for failover
+- Socket client optimizations
 - Application level:
   - Dictionary based message parse/validation/serialization
   - Automatic generation of parser/validator/serializer from XML dictionary file
   - Repeating groups
 - FIX session acceptor
-- Socket client optimization (currently using active mode)
 - Session scheduling (integration with 3rd party job management libraries)
 - etc.
 
@@ -132,11 +132,11 @@ $ mix bench -d 2
 ...
 ## ExFixBench
 benchmark name                         iterations   average time
-Parse - Stage 1 (without validation)      1000000   5.79 µs/op
-Parse - Stage 1                            500000   7.22 µs/op
-Serialize                                  500000   11.87 µs/op
-Parse - Full Msg (without validation)      500000   14.71 µs/op
-Parse - Full Msg                           200000   16.50 µs/op
+Parse - Stage 1 (without validation)      1000000   5.80 µs/op
+Parse - Stage 1                            500000   7.30 µs/op
+Serialize                                  500000   12.00 µs/op
+Parse - Full Msg (without validation)      200000   15.36 µs/op
+Parse - Full Msg                           200000   16.12 µs/op
 ```
 
 ## Maintainer
