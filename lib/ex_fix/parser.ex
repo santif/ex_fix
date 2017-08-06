@@ -32,7 +32,7 @@ defmodule ExFix.Parser do
          @soh, other_msgs::binary() >> ->
 
         orig_msg = << "8=FIXT.1.1", @soh, "9=", str_len::binary(),
-          @soh, body::binary(), @soh, "10=", checksum::binary(), @soh >>
+          @soh, body::binary(), "10=", checksum::binary(), @soh >>
 
         case validate_msg(validate, str_len, body, checksum) do
           true ->

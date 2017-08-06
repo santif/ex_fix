@@ -18,7 +18,7 @@ Add `ex_fix` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
-  [{:ex_fix, "~> 0.2.0"}]
+  [{:ex_fix, "~> 0.2.1"}]
 end
 ```
 
@@ -93,19 +93,15 @@ ExFix.start_session_initiator("simulator", "BUY", "SELL", MySessionHandler,
 #### Output
 
 ```
-[info]  [fix.outgoing] [simulator] 8=FIXT.1.1^A9=94^A35=A^A34=1^A49=BUY^A52=20170806-18:04:59.415^A56=SELL^A98=0^A108=60^A141=Y^A553=user1^A554=pwd1^A1137=9^A10=020^A
-
-[info]  [fix.incoming] [simulator] 8=FIXT.1.1^A9=75^A35=A^A34=1^A49=SELL^A52=20170806-18:04:59.416^A56=BUY^A98=0^A108=60^A141=Y^A1137=9^A^A10=241^A
-
-[info]  Session msg received: %ExFix.InMessage{complete: true, error_reason: nil, fields: [{"35", "A"}, {"34", "1"}, {"49", "SELL"}, {"52", "20170806-18:04:59.416"}, {"56", "BUY"}, {"98", "0"}, {"108", "60"}, {"141", "Y"}, {"1137", "9"}], msg_type: "A", original_fix_msg: <<56, 61, 70, 73, 88, 84, 46, 49, 46, 49, 1, 57, 61, 55, 53, 1, 51, 53, 61, 65, 1, 51, 52, 61, 49, 1, 52, 57, 61, 83, 69, 76, 76, 1, 53, 50, 61, 50, 48, 49, 55, 48, 56, 48, 54, ...>>, other_msgs: "", poss_dup: false, rest_msg: "", seqnum: 1, subject: nil, valid: true}
-
+[debug] Starting FIX session: [simulator]
+[debug] [simulator] Trying to connect to localhost:9876...
+[info]  [fix.outgoing] [simulator] 8=FIXT.1.1^A9=94^A35=A^A34=1^A49=BUY^A52=20170806-20:25:24.194^A56=SELL^A98=0^A108=60^A141=Y^A553=user1^A554=pwd1^A1137=9^A10=012^A
+[info]  [fix.incoming] [simulator] 8=FIXT.1.1^A9=75^A35=A^A34=1^A49=SELL^A52=20170806-20:25:24.196^A56=BUY^A98=0^A108=60^A141=Y^A1137=9^A10=234^A
+[info]  Session msg received: %ExFix.InMessage{complete: true, error_reason: nil, fields: [{"35", "A"}, {"34", "1"}, {"49", "SELL"}, {"52", "20170806-20:25:24.196"}, {"56", "BUY"}, {"98", "0"}, {"108", "60"}, {"141", "Y"}, {"1137", "9"}], msg_type: "A", original_fix_msg: <<56, 61, 70, 73, 88, 84, 46, 49, 46, 49, 1, 57, 61, 55, 53, 1, 51, 53, 61, 65, 1, 51, 52, 61, 49, 1, 52, 57, 61, 83, 69, 76, 76, 1, 53, 50, 61, 50, 48, 49, 55, 48, 56, 48, 54, ...>>, other_msgs: "", poss_dup: false, rest_msg: "", seqnum: 1, subject: nil, valid: true}
 [info]  session_update_status [simulator] - Status: :connected
-
-[info]  [fix.outgoing] [simulator] 8=FIXT.1.1^A9=126^A35=D^A34=2^A49=BUY^A52=20170806-18:04:59.423^A56=SELL^A1=1234^A11=cod12345^A38=10^A40=2^A44=1.23^A54=1^A55=SYM1^A60=20170806-18:04:59.423^A10=115^A
-
-[info]  [fix.incoming] [simulator] 8=FIXT.1.1^A9=126^A35=8^A34=2^A49=SELL^A52=20170806-18:04:59.423^A56=BUY^A1=1234^A6=1.23^A14=10^A17=20000^A31=1.23^A37=20000^A39=2^A54=1^A55=SYM1^A150=2^A151=0^A^A10=038^A
-
-[info]  App msg received: %ExFix.InMessage{complete: true, error_reason: nil, fields: [{"35", "8"}, {"34", "2"}, {"49", "SELL"}, {"52", "20170806-18:04:59.423"}, {"56", "BUY"}, {"1", "1234"}, {"6", "1.23"}, {"14", "10"}, {"17", "20000"}, {"31", "1.23"}, {"37", "20000"}, {"39", "2"}, {"54", "1"}, {"55", "SYM1"}, {"150", "2"}, {"151", "0"}], msg_type: "8", original_fix_msg: <<56, 61, 70, 73, 88, 84, 46, 49, 46, 49, 1, 57, 61, 49, 50, 54, 1, 51, 53, 61, 56, 1, 51, 52, 61, 50, 1, 52, 57, 61, 83, 69, 76, 76, 1, 53, 50, 61, 50, 48, 49, 55, 48, 56, 48, ...>>, other_msgs: "", poss_dup: false, rest_msg: "", seqnum: 2, subject: nil, valid: true}
+[info]  [fix.outgoing] [simulator] 8=FIXT.1.1^A9=126^A35=D^A34=2^A49=BUY^A52=20170806-20:25:24.202^A56=SELL^A1=1234^A11=cod12345^A38=10^A40=2^A44=1.23^A54=1^A55=SYM1^A60=20170806-20:25:24.202^A10=081^A
+[info]  [fix.incoming] [simulator] 8=FIXT.1.1^A9=118^A35=8^A34=2^A49=SELL^A52=20170806-20:25:24.203^A56=BUY^A1=1234^A6=1.23^A14=10^A17=2^A31=1.23^A37=2^A39=2^A54=1^A55=SYM1^A150=2^A151=0^A10=151^A
+[info]  App msg received: %ExFix.InMessage{complete: true, error_reason: nil, fields: [{"35", "8"}, {"34", "2"}, {"49", "SELL"}, {"52", "20170806-20:25:24.203"}, {"56", "BUY"}, {"1", "1234"}, {"6", "1.23"}, {"14", "10"}, {"17", "2"}, {"31", "1.23"}, {"37", "2"}, {"39", "2"}, {"54", "1"}, {"55", "SYM1"}, {"150", "2"}, {"151", "0"}], msg_type: "8", original_fix_msg: <<56, 61, 70, 73, 88, 84, 46, 49, 46, 49, 1, 57, 61, 49, 49, 56, 1, 51, 53, 61, 56, 1, 51, 52, 61, 50, 1, 52, 57, 61, 83, 69, 76, 76, 1, 53, 50, 61, 50, 48, 49, 55, 48, 56, 48, ...>>, other_msgs: "", poss_dup: false, rest_msg: "", seqnum: 2, subject: nil, valid: true}
 ```
 
 ## Two-phase parse

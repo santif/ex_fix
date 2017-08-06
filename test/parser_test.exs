@@ -15,6 +15,7 @@ defmodule ExFix.ParserTest do
     assert fix_msg.valid == true
     assert fix_msg.complete == false
     assert fix_msg.subject == "1557"
+    assert fix_msg.original_fix_msg == data
   end
 
   test "Parse message - full" do
@@ -26,6 +27,7 @@ defmodule ExFix.ParserTest do
     assert fix_msg.valid == true
     assert fix_msg.complete == true
     assert fix_msg.subject == "1557"
+    assert fix_msg.original_fix_msg == data
     assert fix_msg.fields == [
       {"35", "8"},
       {"34", "12345"},
@@ -67,6 +69,7 @@ defmodule ExFix.ParserTest do
     fix_msg = Parser.parse1(data, Dictionary, 12_345)
     assert fix_msg.valid == false
     assert fix_msg.error_reason == :garbled
+    assert fix_msg.original_fix_msg == data
   end
 
   test "Parse valid message with RawData field" do
@@ -77,6 +80,7 @@ defmodule ExFix.ParserTest do
     assert fix_msg.valid == true
     assert fix_msg.complete == true
     assert fix_msg.subject == nil
+    assert fix_msg.original_fix_msg == data
     assert fix_msg.fields == [
       {"35", "B"},
       {"34", "12345"},
@@ -94,5 +98,6 @@ defmodule ExFix.ParserTest do
     fix_msg = Parser.parse1(data, Dictionary, 12_345)
     assert fix_msg.valid == false
     assert fix_msg.error_reason == :garbled
+    assert fix_msg.original_fix_msg == data
   end
 end
