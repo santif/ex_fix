@@ -6,7 +6,7 @@ defmodule ExFix.SessionTest do
   alias ExFix.Session.MessageToSend
   alias ExFix.Session
   alias ExFix.OutMessage
-  alias ExFix.TestHelper.FixDummyApplication
+  alias ExFix.TestHelper.FixDummySessionHandler
 
   @msg_type_logon             "A"
   @msg_type_heartbeat         "0"
@@ -33,8 +33,8 @@ defmodule ExFix.SessionTest do
 
   setup do
     config = %SessionConfig{name: "test", mode: :initiator, sender_comp_id: "BUYSIDE",
-      target_comp_id: "SELLSIDE", logon_username: "testuser", logon_password: "testpwd",
-      fix_application: FixDummyApplication, dictionary: ExFix.DefaultDictionary,
+      target_comp_id: "SELLSIDE", username: "testuser", password: "testpwd",
+      session_handler: FixDummySessionHandler, dictionary: ExFix.DefaultDictionary,
       time_service: @t0}
     {:ok, config: config}
   end

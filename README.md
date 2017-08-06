@@ -25,8 +25,8 @@ end
 ## Usage
 
 ```elixir
-defmodule MyFixApplication do
-  @behaviour ExFix.FixApplication
+defmodule MySessionHandler do
+  @behaviour ExFix.SessionHandler
   require Logger
 
   alias ExFix.InMessage
@@ -64,7 +64,7 @@ defmodule MyFixApplication do
     |> ExFix.send_message!(session_name)
   end
 
-  def on_message(session_name, msg_type, %InMessage{} = msg, _env) do
+  def on_app_message(session_name, msg_type, %InMessage{} = msg, _env) do
     Logger.info "App msg received: #{inspect Parser.parse2(msg)}"
   end
 
@@ -75,9 +75,9 @@ defmodule MyFixApplication do
   def on_logout(_session_id, _env), do: :ok
 end
 
-ExFix.start_session_initiator("mysession", "SENDER", "TARGET", MyFixApplication,
-  socket_connect_host: "localhost", socket_connect_port: 9876,
-  logon_username: "user1", logon_password: "pwd1", transport_mod: :ssl)
+ExFix.start_session_initiator("mysession", "SENDER", "TARGET", MySessionHandler,
+  hostname: "localhost", port: 9876, username: "user1", password: "pwd1",
+  transport_mod: :ssl)
 ```
 
 ## Features
@@ -112,7 +112,7 @@ This is a work in progress. Here is a list of some pending tasks, PRs are welcom
   - Automatic generation of parser/validator/serializer from XML dictionary file
   - Repeating groups
 - FIX session acceptor
-- Socket client optimization (currently uses active mode)
+- Socket client optimization (currently using active mode)
 - Session scheduling (integration with 3rd party job management libraries)
 - etc.
 

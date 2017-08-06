@@ -192,8 +192,8 @@ defmodule ExFix.SessionWorker do
     {:ok, session} = Session.init(config)
     {:ok, msgs_to_send, session} = Session.session_start(session)
     %Session{config: config} = session
-    host = config.socket_connect_host
-    port = config.socket_connect_port
+    host = config.hostname
+    port = config.port
     Logger.debug fn -> "[#{fix_session_name}] Trying to connect to #{host}:#{port}..." end
     str_host = String.to_charlist(host)
     options = [mode: :binary] ++ config.transport_options

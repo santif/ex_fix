@@ -8,7 +8,7 @@ defmodule ExFix.SessionWorkerTest do
   alias ExFix.Session.MessageToSend
   alias ExFix.OutMessage
   alias ExFix.SessionConfig
-  alias ExFix.TestHelper.FixEmptyApplication
+  alias ExFix.TestHelper.FixEmptySessionHandler
   alias ExFix.TestHelper.TestTransport
   alias ExFix.TestHelper.TestSessionRegistry
 
@@ -29,12 +29,12 @@ defmodule ExFix.SessionWorkerTest do
       mode: :initiator,
       sender_comp_id: "SENDER",
       target_comp_id: "TARGET",
-      fix_application: FixEmptyApplication,
+      session_handler: FixEmptySessionHandler,
       dictionary: DefaultDictionary,
-      socket_connect_host: "localhost",
-      socket_connect_port: 9876,
-      logon_username: nil,
-      logon_password: nil,
+      hostname: "localhost",
+      port: 9876,
+      username: nil,
+      password: nil,
       log_incoming_msg: true,
       log_outgoing_msg: true,
       default_applverid: "9",
@@ -47,6 +47,7 @@ defmodule ExFix.SessionWorkerTest do
       transport_mod: TestTransport,
       transport_options: [test_pid: self()],
       time_service: nil,
+      env: %{}
     }
     %{config: config}
   end

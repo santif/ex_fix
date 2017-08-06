@@ -6,8 +6,8 @@ defmodule ExFix do
   ## Usage
 
   ```
-  defmodule MyFixApplication do
-    @behaviour ExFix.FixApplication
+  defmodule MySessionHandler do
+    @behaviour ExFix.SessionHandler
     require Logger
 
     alias ExFix.InMessage
@@ -45,7 +45,7 @@ defmodule ExFix do
       |> ExFix.send_message!(session_name)
     end
 
-    def on_message(session_name, msg_type, %InMessage{} = msg, _env) do
+    def on_app_message(session_name, msg_type, %InMessage{} = msg, _env) do
       Logger.info "App msg received: \#{inspect Parser.parse2(msg)}"
     end
 
@@ -56,9 +56,9 @@ defmodule ExFix do
     def on_logout(_session_id, _env), do: :ok
   end
 
-  ExFix.start_session_initiator("mysession", "SENDER", "TARGET", MyFixApplication,
-    socket_connect_host: "localhost", socket_connect_port: 9876,
-    logon_username: "user1", logon_password: "pwd1", transport_mod: :ssl)
+  ExFix.start_session_initiator("mysession", "SENDER", "TARGET", MySessionHandler,
+    hostname: "localhost", port: 9876, username: "user1", password: "pwd1",
+    transport_mod: :ssl)
   ```
   """
 
@@ -67,21 +67,23 @@ defmodule ExFix do
   alias ExFix.SessionRegistry
   alias ExFix.SessionWorker
   alias ExFix.OutMessage
+  alias ExFix.SessionHandler
 
-  @default_dictionary Application.get_env(:ex_fix, :default_dictionary)
+  @default_dictionary Application.get_env(:ex_fix, :default_dictionary, ExFix.DefaultDictionary)
   @session_registry Application.get_env(:ex_fix, :session_registry, ExFix.DefaultSessionRegistry)
 
   @doc """
   Starts FIX session initiator
   """
-  ## TODO spec
+  @spec start_session_initiator(String.t, String.t, String.t, SessionHandler, list()) :: :ok
   def start_session_initiator(session_name, sender_comp_id, target_comp_id,
-      fix_application, opts \\ []) do
+      session_handler, opts \\ []) do
     opts = Enum.into(opts, %{
-      socket_connect_host: "localhost",
-      socket_connect_port: 9876,
-      logon_username: nil,
-      logon_password: nil,
+      hostname: "localhost",
+      port: 9876,
+      username: nil,
+      password: nil,
+      dictionary: @default_dictionary,
       log_incoming_msg: true,
       log_outgoing_msg: true,
       default_applverid: "9",
@@ -101,8 +103,7 @@ defmodule ExFix do
       mode: :initiator,
       sender_comp_id: sender_comp_id,
       target_comp_id: target_comp_id,
-      fix_application: fix_application,
-      dictionary: @default_dictionary,
+      session_handler: session_handler
     }, opts)
     session_registry = opts[:session_registry] || @session_registry
     session_registry.start_session(session_name, config)

@@ -3,18 +3,17 @@ defmodule ExFix.SessionConfig do
   FIX session configuration
   """
 
-  @enforce_keys [:name, :mode, :fix_application, :dictionary,
-    :sender_comp_id, :target_comp_id]
+  @enforce_keys [:name, :mode, :session_handler, :sender_comp_id, :target_comp_id]
   defstruct name: nil,
     mode: :initiator,
-    fix_application: nil,
-    dictionary: nil,
+    session_handler: nil,
+    dictionary: ExFix.DefaultDictionary,
     sender_comp_id: nil,
     target_comp_id: nil,
-    socket_connect_host: "localhost",
-    socket_connect_port: 9876,
-    logon_username: nil,
-    logon_password: nil,
+    hostname: "localhost",
+    port: 9876,
+    username: nil,
+    password: nil,
     log_incoming_msg: true,
     log_outgoing_msg: true,
     default_applverid: "9",

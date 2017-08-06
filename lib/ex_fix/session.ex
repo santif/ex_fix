@@ -160,16 +160,16 @@ defmodule ExFix.Session do
       logon_encrypt_method: logon_encrypt_method,
       heart_bt_int: heart_bt_int,
       reset_on_logon: reset_on_logon,
-      logon_username: logon_username,
-      logon_password: logon_password,
+      username: username,
+      password: password,
       default_applverid: default_applverid
     } = config
     seqnum = lastseq + 1
     fields = [{@field_logon_encrypt_method, logon_encrypt_method},
               {@field_heart_bt_int, heart_bt_int},
               {@field_reset_on_logon, reset_on_logon},
-              {@field_logon_username, logon_username},
-              {@field_logon_password, logon_password},
+              {@field_logon_username, username},
+              {@field_logon_password, password},
               {@field_default_applverid, default_applverid}]
     logon_msg = build_message(config, @msg_type_logon, seqnum, fields)
     {:ok, [logon_msg], %Session{session | status: :connecting, out_lastseq: seqnum}}
@@ -231,9 +231,9 @@ defmodule ExFix.Session do
   """
   def process_incoming_message(expected_seqnum, @msg_type_logon = msg_type, session_name,
       %Session{config: config} = session, %InMessage{seqnum: _seqnum} = msg) do
-    %SessionConfig{fix_application: fix_application, env: env} = config
-    fix_application.on_session_message(session_name, msg_type, msg, env)
-    fix_application.on_logon(session_name, env)
+    %SessionConfig{session_handler: session_handler, env: env} = config
+    session_handler.on_session_message(session_name, msg_type, msg, env)
+    session_handler.on_logon(session_name, env)
     {:ok, [], %Session{session | in_lastseq: expected_seqnum, status: :online,
       extra_bytes: msg.other_msgs}}
   end
@@ -241,8 +241,8 @@ defmodule ExFix.Session do
   def process_incoming_message(_expected_seqnum, @msg_type_test_request = msg_type, session_name,
       %Session{config: config, out_lastseq: out_lastseq} = session,
       %InMessage{seqnum: seqnum} = msg) do
-    %SessionConfig{fix_application: fix_application, env: env} = config
-    fix_application.on_session_message(session_name, msg_type, msg, env)
+    %SessionConfig{session_handler: session_handler, env: env} = config
+    session_handler.on_session_message(session_name, msg_type, msg, env)
     out_lastseq = out_lastseq + 1
     hb_msg = build_message(config, @msg_type_heartbeat, out_lastseq, [])
     {:ok, [hb_msg], %Session{session | in_lastseq: seqnum, out_lastseq: out_lastseq,
@@ -252,8 +252,8 @@ defmodule ExFix.Session do
   def process_incoming_message(expected_seqnum, @msg_type_resend_request = msg_type, session_name,
       %Session{config: config, out_queue: out_queue} = session,
       %InMessage{seqnum: _seqnum, fields: fields} = msg) do
-    %SessionConfig{fix_application: fix_application, env: env} = config
-    fix_application.on_session_message(session_name, msg_type, msg, env)
+    %SessionConfig{session_handler: session_handler, env: env} = config
+    session_handler.on_session_message(session_name, msg_type, msg, env)
     {@field_begin_seq_no, begin_seq} = :lists.keyfind(@field_begin_seq_no, 1, fields)
     {@field_end_seq_no, end_seq} = :lists.keyfind(@field_end_seq_no, 1, fields)
     {begin_seq, _} = Integer.parse(begin_seq)
@@ -264,8 +264,8 @@ defmodule ExFix.Session do
 
   def process_incoming_message(_expected_seqnum, @msg_type_reject = msg_type, session_name,
       %Session{config: config} = session, %InMessage{seqnum: seqnum} = msg) do
-    %SessionConfig{fix_application: fix_application, env: env} = config
-    fix_application.on_session_message(session_name, msg_type, msg, env)
+    %SessionConfig{session_handler: session_handler, env: env} = config
+    session_handler.on_session_message(session_name, msg_type, msg, env)
     Logger.warn fn -> "[fix.warning] [#{session_name}] Reject received: " <>
       :unicode.characters_to_binary(msg.original_fix_msg, :latin1, :utf8) end
     {:ok, [], %Session{session | in_lastseq: seqnum, extra_bytes: msg.other_msgs}}
@@ -273,8 +273,8 @@ defmodule ExFix.Session do
 
   def process_incoming_message(expected_seqnum, @msg_type_sequence_reset = msg_type, session_name,
       %Session{config: config} = session, %InMessage{seqnum: seqnum, fields: fields} = msg) do
-    %SessionConfig{fix_application: fix_application, env: env} = config
-    fix_application.on_session_message(session_name, msg_type, msg, env)
+    %SessionConfig{session_handler: session_handler, env: env} = config
+    session_handler.on_session_message(session_name, msg_type, msg, env)
     gap_fill = :lists.keyfind(@field_gap_fill, 1, fields) == {@field_gap_fill, "Y"}
     {@field_new_seq_no, new_seq_no_str} = :lists.keyfind(@field_new_seq_no, 1, fields)
     {new_seq_no, _} = Integer.parse(new_seq_no_str)
@@ -292,9 +292,9 @@ defmodule ExFix.Session do
   def process_incoming_message(_expected_seqnum, @msg_type_logout = msg_type, session_name,
       %Session{config: config, status: :online, out_lastseq: out_lastseq} = session,
       %InMessage{seqnum: seqnum} = msg) do
-    %SessionConfig{fix_application: fix_application, env: env} = config
-    fix_application.on_session_message(session_name, msg_type, msg, env)
-    fix_application.on_logout(session_name, env)
+    %SessionConfig{session_handler: session_handler, env: env} = config
+    session_handler.on_session_message(session_name, msg_type, msg, env)
+    session_handler.on_logout(session_name, env)
     out_lastseq = out_lastseq + 1
     logout_msg = build_message(config, @msg_type_logout, out_lastseq, [])
     {:ok, [logout_msg], %Session{session | in_lastseq: seqnum,
@@ -302,17 +302,17 @@ defmodule ExFix.Session do
   end
   def process_incoming_message(_expected_seqnum, @msg_type_logout = msg_type, session_name,
       %Session{config: config} = session, %InMessage{seqnum: seqnum} = msg) do
-    %SessionConfig{fix_application: fix_application, env: env} = config
-    fix_application.on_session_message(session_name, msg_type, msg, env)
-    fix_application.on_logout(session_name, env)
+    %SessionConfig{session_handler: session_handler, env: env} = config
+    session_handler.on_session_message(session_name, msg_type, msg, env)
+    session_handler.on_logout(session_name, env)
     {:ok, [], %Session{session | in_lastseq: seqnum, status: :offline,
       extra_bytes: msg.other_msgs}}
   end
 
   def process_incoming_message(_expected_seqnum, @msg_type_heartbeat = msg_type, session_name,
       %Session{config: config} = session, %InMessage{seqnum: seqnum} = msg) do
-    %SessionConfig{fix_application: fix_application, env: env} = config
-    fix_application.on_session_message(session_name, msg_type, msg, env)
+    %SessionConfig{session_handler: session_handler, env: env} = config
+    session_handler.on_session_message(session_name, msg_type, msg, env)
     {:ok, [], %Session{session | in_lastseq: seqnum, extra_bytes: msg.other_msgs}}
   end
 
@@ -320,13 +320,13 @@ defmodule ExFix.Session do
       %Session{config: config, out_lastseq: out_lastseq} = session,
       %InMessage{poss_dup: false, fields: fields} = msg) do
     %SessionConfig{sender_comp_id: sender_comp_id,
-      target_comp_id: target_comp_id, fix_application: fix_application, env: env} = config
+      target_comp_id: target_comp_id, session_handler: session_handler, env: env} = config
     sender = :lists.keyfind(@field_sender_comp_id, 1, fields)
     target = :lists.keyfind(@field_target_comp_id, 1, fields)
     case {sender, target} do
       {{@field_sender_comp_id, ^target_comp_id}, {@field_target_comp_id, ^sender_comp_id}} ->
         ## Valid message
-        fix_application.on_message(session_name, msg_type, msg, env)
+        session_handler.on_app_message(session_name, msg_type, msg, env)
         {:ok, [], %Session{session | in_lastseq: expected_seqnum,
           extra_bytes: msg.other_msgs}}
       _ ->
@@ -334,7 +334,7 @@ defmodule ExFix.Session do
           {@field_sender_comp_id, ^target_comp_id} -> "TargetCompID"
           _ -> "SenderCompID"
         end
-        fix_application.on_logout(session_name, env)
+        session_handler.on_logout(session_name, env)
         out_lastseq = out_lastseq + 1
         reject_msg = build_message(config, @msg_type_reject, out_lastseq,
           [{@field_session_reject_reason, "9"},
@@ -357,8 +357,8 @@ defmodule ExFix.Session do
         {@field_sending_time, sending_time} = :lists.keyfind(@field_sending_time, 1, fields)
         case orig_sending_time <= sending_time do
           true ->
-            %SessionConfig{name: session_name, fix_application: fix_application, env: env} = config
-            fix_application.on_message(session_name, msg_type, msg, env)
+            %SessionConfig{name: session_name, session_handler: session_handler, env: env} = config
+            session_handler.on_app_message(session_name, msg_type, msg, env)
             {:ok, [], %Session{session | in_lastseq: seqnum, extra_bytes: msg.other_msgs}}
           false ->
             out_lastseq = out_lastseq + 1

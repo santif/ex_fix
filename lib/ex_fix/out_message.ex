@@ -28,7 +28,7 @@ defmodule ExFix.OutMessage do
   @doc """
 
   """
-  def set_fields(%OutMessage{fields: fields} = msg, new_fields) do
+  def set_fields(%OutMessage{} = msg, new_fields) do
     Enum.reduce(new_fields, msg, fn({field, value}, %OutMessage{} = struct) ->
       set_field(struct, field, value)
     end)

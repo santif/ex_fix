@@ -6,14 +6,14 @@ defmodule ExFix.TestHelper do
   alias ExFix.Session.MessageToSend
   alias ExFix.DefaultDictionary, as: Dictionary
 
-  defmodule FixDummyApplication do
-    @behaviour ExFix.FixApplication
+  defmodule FixDummySessionHandler do
+    @behaviour ExFix.SessionHandler
 
     def on_logon(session_name, env) do
       send(self(), {:logon, session_name, env})
     end
 
-    def on_message(session_name, msg_type, msg, env) do
+    def on_app_message(session_name, msg_type, msg, env) do
       send(self(), {:msg, session_name, msg_type, msg, env})
     end
 
@@ -24,13 +24,13 @@ defmodule ExFix.TestHelper do
     def on_logout(_session_id, _env), do: :ok
   end
 
-  defmodule FixEmptyApplication do
-    @behaviour ExFix.FixApplication
+  defmodule FixEmptySessionHandler do
+    @behaviour ExFix.SessionHandler
 
     def on_logon(_session_id, _env) do
     end
 
-    def on_message(_session_id, _msg_type, _msg, _env) do
+    def on_app_message(_session_id, _msg_type, _msg, _env) do
     end
 
     def on_session_message(_session_id, _msg_type, _msg, _env) do
@@ -130,9 +130,7 @@ defmodule ExFix.TestHelper do
   defmodule InMessageTestDict do
     @behaviour ExFix.Dictionary
 
-    def field_info(value) when is_binary(value), do: {value, :string}
-
-    def subject("8"), do: "1"
+    def subject("8"), do: "1"  ## 8 (ExecutionReport) subject: 1 (Account)
     def subject(_), do: nil
   end
 
@@ -141,10 +139,6 @@ defmodule ExFix.TestHelper do
   """
   def build_message(msg_type, seqnum, sender, target, now, fields \\ [],
       orig_sending_time \\ nil, resend \\ false) do
-    fields = for {field_name, value} <- fields do
-      {field, _} = Dictionary.field_info(field_name)
-      {field, value}
-    end
     Serializer.serialize(%MessageToSend{seqnum: seqnum,
       msg_type: msg_type,
       sender: sender,

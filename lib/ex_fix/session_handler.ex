@@ -1,6 +1,6 @@
-defmodule ExFix.FixApplication do
+defmodule ExFix.SessionHandler do
   @moduledoc """
-  FIX application behaviour. Declare callbacks to process received FIX messages
+  FIX Session Handler behaviour. Declare callbacks to process received FIX messages
   and session events.
   """
 

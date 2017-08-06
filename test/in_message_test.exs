@@ -16,8 +16,8 @@ defmodule ExFix.InMessageTest do
 
   test "InMessage tests", %{bin_msg: bin_msg} do
     fix_msg = Parser.parse1(bin_msg, Dictionary, 12_345)
-    assert InMessage.get_field(fix_msg, 49) == "MARKET"
-    assert InMessage.get_field(fix_msg, 52) == "20161007-16:28:50.802"
+    assert InMessage.get_field(fix_msg, "49") == "MARKET"
+    assert InMessage.get_field(fix_msg, "52") == "20161007-16:28:50.802"
     # assert InMessage.get_field(fix_msg, "SendingTime", TestDict) == Calendar.DateTime.Parse.rfc3339_utc
   end
 end

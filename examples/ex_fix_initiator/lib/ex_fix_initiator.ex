@@ -3,29 +3,31 @@ defmodule ExFixInitiator do
   Documentation for ExFixInitiator.
   """
 
-  defmodule FixApplication do
+  defmodule SessionHandler do
     @moduledoc false
     require Logger
-    @behaviour ExFix.FixApplication
+    @behaviour ExFix.SessionHandler
 
     alias ExFix.OutMessage
     alias ExFix.InMessage
 
-    @tag_account         1
-    @tag_cl_ord_id      11
-    @tag_order_qty      38
-    @tag_ord_type       40
-    @tag_price          44
-    @tag_side           54
-    @tag_symbol         55
-    @tag_time_in_force  59
-    @tag_transact_time  60
+    @msg_type_new_order_single "D"
+
+    @tag_account          "1"
+    @tag_cl_ord_id       "11"
+    @tag_order_qty       "38"
+    @tag_ord_type        "40"
+    @tag_price           "44"
+    @tag_side            "54"
+    @tag_symbol          "55"
+    @tag_time_in_force   "59"
+    @tag_transact_time   "60"
 
     def on_logon(session_id, _env) do
       Logger.info fn -> "[fix.incoming] [#{session_id}] onLogon" end
       for _x <- 1..10_000 do
         spawn(fn() ->
-          out_msg = "D"
+          @msg_type_new_order_single
           |> OutMessage.new()
           |> OutMessage.set_field(@tag_account, 1234)
           |> OutMessage.set_field(@tag_cl_ord_id, "cod12345")
@@ -40,10 +42,10 @@ defmodule ExFixInitiator do
         end)
       end
     end
-    def on_message(session_id, _msg_type, %InMessage{original_fix_msg: original_fix_msg}, _env) do
+    def on_app_message(session_id, _msg_type, %InMessage{original_fix_msg: original_fix_msg}, _env) do
       Logger.info fn -> "[fix.incoming] [#{session_id}] #{original_fix_msg}" end
     end
-    def on_admin_message(session_id, _msg_type, %InMessage{original_fix_msg: original_fix_msg}, _env) do
+    def on_session_message(session_id, _msg_type, %InMessage{original_fix_msg: original_fix_msg}, _env) do
       Logger.info fn -> "[fix.incoming] [#{session_id}] #{original_fix_msg}" end
     end
     def on_logout(session_id, _env) do
@@ -53,6 +55,6 @@ defmodule ExFixInitiator do
 
   def start() do
     ExFix.start_session_initiator("simulator", "BUY", "SELL",
-      FixApplication, dictionary: ExFix.DefaultDictionary, transport_mod: :ssl)
+      SessionHandler, transport_mod: :ssl)
   end
 end
