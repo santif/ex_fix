@@ -4,6 +4,7 @@ defmodule ExFixInitiator do
   """
 
   defmodule MyDictionary do
+    @moduledoc false
     @behaviour ExFix.Dictionary
 
     def subject("8"), do: "1"  ## 8 (ExecutionReport) subject: 1 (Account)
