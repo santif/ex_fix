@@ -29,20 +29,33 @@ defmodule ExFix.SessionWorker do
       tx_timer: nil
   end
 
+  ##
+  ## API
+  ##
+
   def start_link(config, registry) do
-    # name = {:via, ExFix.Registry, {:ex_fix_session, config.name}}
     name = :"ex_fix_session_#{config.name}"
     GenServer.start_link(__MODULE__, [config, registry], name: name)
   end
 
+  # TODO use Registry instead process name
+
   def send_message!(fix_session, out_message) when is_binary(fix_session) do
-    # name = {:via, ExFix.Registry, {:ex_fix_session, fix_session}}
     name = :"ex_fix_session_#{fix_session}"
     GenServer.call(name, {:send_message, out_message})
   end
 
+  def send_message_async!(fix_session, out_message) when is_binary(fix_session) do
+    name = :"ex_fix_session_#{fix_session}"
+    GenServer.cast(name, {:send_message, out_message})
+  end
+
+  def send_messages_async!(fix_session, out_messages) when is_binary(fix_session) do
+    name = :"ex_fix_session_#{fix_session}"
+    GenServer.cast(name, {:send_messages, out_messages})
+  end
+
   def stop(fix_session) do
-    # name = {:via, ExFix.Registry, {:ex_fix_session, fix_session}}
     name = :"ex_fix_session_#{fix_session}"
     GenServer.call(name, :stop)
   end

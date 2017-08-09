@@ -119,7 +119,7 @@ defmodule ExFix do
   """
   @spec send_messages_async!([OutMessage.t], Session.session_name) :: :ok | no_return
   def send_messages_async!(out_messages, session_name) do
-    SessionWorker.send_messages_async(session_name, out_messages)
+    SessionWorker.send_messages_async!(session_name, out_messages)
   end
 
   @doc """
