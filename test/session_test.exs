@@ -6,6 +6,7 @@ defmodule ExFix.SessionTest do
   alias ExFix.Session.MessageToSend
   alias ExFix.Session
   alias ExFix.OutMessage
+  alias ExFix.InMessage
   alias ExFix.TestHelper.FixDummySessionHandler
 
   @msg_type_logon             "A"
@@ -958,5 +959,20 @@ defmodule ExFix.SessionTest do
 
     assert Session.get_status(session) == :online
     assert length(msgs_to_send) == 0
+  end
+
+  test "Receive reject message", %{config: cfg} do
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 98, out_lastseq: 8}
+
+    seq = 99
+    incoming_data = build_message(@msg_type_reject, seq, "SELLSIDE", "BUYSIDE", @t0)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 99
+    assert length(msgs_to_send) == 0
+
+    assert_receive {:session_msg, "test", @msg_type_reject, %InMessage{seqnum: 99}, env}
   end
 end

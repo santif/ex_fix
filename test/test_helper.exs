@@ -18,7 +18,7 @@ defmodule ExFix.TestHelper do
     end
 
     def on_session_message(session_name, msg_type, msg, env) do
-      send(self(), {:admin_msg, session_name, msg_type, msg, env})
+      send(self(), {:session_msg, session_name, msg_type, msg, env})
     end
 
     def on_logout(_session_id, _env), do: :ok
