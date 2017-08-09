@@ -1,66 +1,14 @@
 defmodule ExFix do
   @moduledoc """
   Elixir implementation of FIX Session Protocol FIXT.1.1.
-  Currently only supports FIX session initiator (buy side).
 
-  ## Usage
+  `ExFix` module responsibilities:
+  - start/stop FIX sessions
+  - send messages to FIX counterparty
+  - retrieve status of a FIX session
 
-  ```
-  defmodule MySessionHandler do
-    @behaviour ExFix.SessionHandler
-    require Logger
-
-    alias ExFix.InMessage
-    alias ExFix.OutMessage
-    alias ExFix.Parser
-
-    @msg_new_order_single  "D"
-
-    @field_account         "1"
-    @field_cl_ord_id      "11"
-    @field_order_qty      "38"
-    @field_ord_type       "40"
-    @field_price          "44"
-    @field_side           "54"
-    @field_symbol         "55"
-    @field_transact_time  "60"
-
-    @value_side_buy        "1"
-    @value_ord_type_limit  "2"
-
-    def on_logon(session_name, _env) do
-      spawn fn() ->
-        \#\# Buy 10 shares of SYM1 for $1.23 per share
-
-        @msg_new_order_single
-        |> OutMessage.new()
-        |> OutMessage.set_field(@field_account, 1234)
-        |> OutMessage.set_field(@field_cl_ord_id, "cod12345")
-        |> OutMessage.set_field(@field_order_qty, 10)
-        |> OutMessage.set_field(@field_ord_type, @value_ord_type_limit)
-        |> OutMessage.set_field(@field_price, 1.23)
-        |> OutMessage.set_field(@field_side, @value_side_buy)
-        |> OutMessage.set_field(@field_symbol, "SYM1")
-        |> OutMessage.set_field(@field_transact_time, DateTime.utc_now())
-        |> ExFix.send_message!(session_name)
-      end
-    end
-
-    def on_app_message(_session_name, _msg_type, %InMessage{} = msg, _env) do
-      Logger.info "App msg received: \#{inspect Parser.parse2(msg)}"
-    end
-
-    def on_session_message(_session_name, _msg_type, %InMessage{} = msg, _env) do
-      Logger.info "Session msg received: \#{inspect Parser.parse2(msg)}"
-    end
-
-    def on_logout(_session_id, _env), do: :ok
-  end
-
-  ExFix.start_session_initiator("simulator", "BUY", "SELL", MySessionHandler,
-    hostname: "localhost", port: 9876, username: "user1", password: "pwd1",
-    transport_mod: :ssl)
-  ```
+  Currently ExFIX only supports FIX initiator (aka "client"), who sends orders and receives
+  execution reports from a FIX acceptor.
   """
 
   alias ExFix.Session
@@ -74,8 +22,35 @@ defmodule ExFix do
   @session_registry Application.get_env(:ex_fix, :session_registry, ExFix.DefaultSessionRegistry)
 
   @doc """
-  Starts FIX session initiator
+  Starts a FIX session initiator.
+
+  ## Parameters:
+   - `session_name`: Name used to uniquely identify a FIX session in your app.
+   - `sender_comp_id`: Value of field `49 (SenderCompID)` of sent messages
+   - `target_comp_id`: Value of field `56 (TargetCompID)` of sent messages
+   - `session_handler`: Module that implements callbacks of ExFix.SessionHandler behavior
+   - `opts` see Options section bellow
+
+  ## Options:
+   - hostname: Hostname or IP of FIX Acceptor ("server")
+   - port: TCP port (integer)
+   - username: Username, in plain text
+   - password: Password, in plain text
+   - dictionary: Module that implements callbacks of ExFix.Dictionary. By default is ExFix.DefaultDictionary
+   - log_incoming_msg: Boolean indicating if received messages will be logged, using `Logger`
+   - log_outgoing_msg: Boolean indicating if sent messages will be logged, using `Logger`
+   - default_applverid: String that specifies value of field `1137 (DefaultApplVerID)`
+   - logon_encrypt_method: TBD
+   - heart_bt_int: TBD
+   - max_output_buf_count: TBD
+   - reconnect_interval: TBD
+   - reset_on_logon: TBD
+   - validate_incoming_message: Validate checksum (field 10) of received messages?
+   - transport_mod: Socket implementation (`:gen_tcp`, `:ssl` or another module with the same interface)
+   - transport_options: Socket options
+   - env: TBD
   """
+
   @spec start_session_initiator(String.t, String.t, String.t, SessionHandler, list()) :: :ok
   def start_session_initiator(session_name, sender_comp_id, target_comp_id,
       session_handler, opts \\ []) do
@@ -111,7 +86,14 @@ defmodule ExFix do
   end
 
   @doc """
-  Send FIX message to a session
+  Sends a FIX message to counterparty. This functions returns when the message is put on the wire.
+
+  If session not exist, connection is not estabished, or session is not online and "logged in",
+  an exception is raised.
+
+  ## Parameters:
+   - `out_message`. See `OutMessage` for more information
+   - `session_name`. String with the session's name.
   """
   @spec send_message!(OutMessage.t, Session.session_name) :: :ok | no_return
   def send_message!(out_message, session_name) do
@@ -119,7 +101,32 @@ defmodule ExFix do
   end
 
   @doc """
-  Stop FIX session
+  Sends a FIX message to counterparty without waiting to check if the message already was sent.
+
+  If session not exist, an exception is raised.
+
+  Same parameters of `send_message!()`
+  """
+  def send_message_async!(out_message, session_name) do
+    SessionWorker.send_message_async!(session_name, out_message)
+  end
+
+  @doc """
+  Sends a list of messages. The session initiator will manage to send all the messages in an
+  efficient way, possibly in many chunks.
+
+  If session not exist, an exception is raised.
+  """
+  @spec send_messages_async!([OutMessage.t], Session.session_name) :: :ok | no_return
+  def send_messages_async!(out_messages, session_name) do
+    SessionWorker.send_messages_async(session_name, out_messages)
+  end
+
+  @doc """
+  Stops a FIX session.
+
+  Send a Logout message to FIX acceptor, wait up to 2 seconds for receive a "response"
+  and disconnects socket.
   """
   @spec stop_session(Session.session_name, SessionRegistry | nil) :: :ok | no_return
   def stop_session(session_name, registry \\ nil) do
