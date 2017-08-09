@@ -925,4 +925,38 @@ defmodule ExFix.SessionTest do
     assert Session.get_in_lastseq(session) == 11
     assert length(msgs_to_send) == 0
   end
+
+  test "PossDupFlag=Y, OrigSendingTime<SendingTime and MsgSeqNum=Expected", %{config: cfg} do
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    session = Session.set_time(session, @t_plus_1)
+
+    seq = 11
+    resend = true
+    orig_sending_time = @t0
+    incoming_data = build_message(@msg_type_execution_report, seq, "SELLSIDE", "BUYSIDE",
+      @t_plus_1, [{@field_account, "1234"}], orig_sending_time, resend)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert length(msgs_to_send) == 0
+  end
+
+  test "PossDupFlag=Y, OrigSendingTime=SendingTime and MsgSeqNum=Expected", %{config: cfg} do
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    session = Session.set_time(session, @t_plus_1)
+
+    seq = 11
+    resend = true
+    orig_sending_time = @t_plus_1
+    incoming_data = build_message(@msg_type_execution_report, seq, "SELLSIDE", "BUYSIDE",
+      @t_plus_1, [{@field_account, "1234"}], orig_sending_time, resend)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert length(msgs_to_send) == 0
+  end
 end
