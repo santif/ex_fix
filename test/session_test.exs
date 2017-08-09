@@ -912,4 +912,17 @@ defmodule ExFix.SessionTest do
     assert msg8.msg_type == @msg_type_sequence_reset
     assert msg8.seqnum == 8
   end
+
+  test "Heartbeat received", %{config: cfg} do
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 8}
+
+    seq = 11
+    incoming_data = build_message(@msg_type_heartbeat, seq, "SELLSIDE", "BUYSIDE", @t0)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 11
+    assert length(msgs_to_send) == 0
+  end
 end
