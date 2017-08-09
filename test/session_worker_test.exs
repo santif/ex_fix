@@ -75,7 +75,7 @@ defmodule ExFix.SessionWorkerTest do
 
     ## Send New Order Single
     now = DateTime.utc_now()
-    out_msg = "D"
+    "D"
     |> OutMessage.new()
     |> OutMessage.set_field(@tag_account, 1234)
     |> OutMessage.set_field(@tag_cl_ord_id, "cod12345")

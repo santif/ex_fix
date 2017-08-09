@@ -973,6 +973,6 @@ defmodule ExFix.SessionTest do
     assert Session.get_in_lastseq(session) == 99
     assert length(msgs_to_send) == 0
 
-    assert_receive {:session_msg, "test", @msg_type_reject, %InMessage{seqnum: 99}, env}
+    assert_receive {:session_msg, "test", @msg_type_reject, %InMessage{seqnum: 99}, _env}
   end
 end

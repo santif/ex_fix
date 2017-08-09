@@ -4,7 +4,6 @@ defmodule ExFix.TestHelper do
 
   alias ExFix.Serializer
   alias ExFix.Session.MessageToSend
-  alias ExFix.DefaultDictionary, as: Dictionary
 
   defmodule FixDummySessionHandler do
     @behaviour ExFix.SessionHandler
@@ -36,7 +35,7 @@ defmodule ExFix.TestHelper do
     def on_session_message(_session_id, _msg_type, _msg, _env) do
     end
 
-    def on_logout(_session_id, env), do: :ok
+    def on_logout(_session_id, _env), do: :ok
   end
 
   defmodule TestTransport do
@@ -102,7 +101,6 @@ defmodule ExFix.TestHelper do
     ##
 
     def init([]) do
-      IO.puts "Starting TestSessionRegistry: #{inspect self()}"
       {:ok, %{}}
     end
 
