@@ -1,7 +1,5 @@
 defmodule ExFix.DefaultDictionary do
-  @moduledoc """
-  Simple FIX Dictionary
-  """
+  @moduledoc false
 
   @behaviour ExFix.Dictionary
 

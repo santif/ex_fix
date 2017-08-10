@@ -5,6 +5,9 @@ defmodule ExFix.InMessage do
 
   alias ExFix.InMessage
 
+  @type field_raw_value :: String.t | field_binary_value
+  @type field_binary_value :: {:binary, binary()}
+
   defstruct valid: false,
       complete: false,
       msg_type: nil,
@@ -19,9 +22,13 @@ defmodule ExFix.InMessage do
 
   @type t :: %InMessage{}
 
-  def get_field(%InMessage{fields: fields}, field) when is_binary(field) do
-    case :lists.keyfind(field, 1, fields) do
-      {^field, value} ->
+  @doc """
+  Returns the raw value of first field with name `field_name`.
+  """
+  @spec get_field(InMessage.t, String.t) :: field_raw_value
+  def get_field(%InMessage{fields: fields}, field_name) when is_binary(field_name) do
+    case :lists.keyfind(field_name, 1, fields) do
+      {^field_name, value} ->
         value
       false ->
         nil
