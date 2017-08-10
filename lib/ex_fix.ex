@@ -3,9 +3,9 @@ defmodule ExFix do
   Elixir implementation of FIX Session Protocol FIXT.1.1.
 
   `ExFix` module responsibilities:
-  - start/stop FIX sessions
-  - send messages to FIX counterparty
-  - retrieve status of a FIX session
+  - Start/stop FIX sessions
+  - Send messages to FIX counterparty
+  - Retrieve status of a FIX session
 
   Currently ExFIX only supports FIX initiator (aka "client"), who sends orders and receives
   execution reports from a FIX acceptor.
@@ -30,31 +30,32 @@ defmodule ExFix do
    - `target_comp_id`: Value of field `56 (TargetCompID)` of sent messages
    - `session_handler`: Module that implements callbacks of ExFix.SessionHandler behavior
    - `opts` see Options section bellow
+   - `session_registry`: Module that implements behavior `ExFix.SessionRegistry`. Default: `ExFix.DefaultSessionRegistry`.
 
   ## Options:
-   - hostname: Hostname or IP of FIX Acceptor ("server")
-   - port: TCP port (integer)
-   - username: Username, in plain text
-   - password: Password, in plain text
-   - dictionary: Module that implements callbacks of ExFix.Dictionary. By default is ExFix.DefaultDictionary
-   - log_incoming_msg: Boolean indicating if received messages will be logged, using `Logger`
-   - log_outgoing_msg: Boolean indicating if sent messages will be logged, using `Logger`
-   - default_applverid: String that specifies value of field `1137 (DefaultApplVerID)`
-   - logon_encrypt_method: Field `98 (EncryptMethod)` for `Logon` mesage (String - default: "0")
-   - heart_bt_int: Field `108 (HeartBtInt)` for `Logon` mesage (Integer - default: 60)
-   - max_output_buf_count: Maximum number of messages in outbound queue (for resend)
-   - reconnect_interval: Interval, in seconds, between reconnection attempts (Integer - default: 15)
-   - reset_on_logon: Field `141 (ResetSeqNumFlag)` for `Logon` mesage (Boolean - only `true` is
-     supported in this version)
-   - validate_incoming_message: Validate checksum (Field `10`) of received messages?
-   - transport_mod: Socket implementation (`:gen_tcp`, `:ssl` or another module with the same interface)
-   - transport_options: Socket options
-   - env: Map with read-only values that is passed to `SessionHandler` callbacks
+   - `hostname`: Hostname or IP of remote FIX Acceptor. String - default: `"localhost"`.
+   - `port`: TCP port. Integer - default: `9876`.
+   - `username`: Value of field `553 (Username)`.
+   - `password`: Value of field `554 (Password)`.
+   - `dictionary`: Module that implements callbacks of ExFix.Dictionary. Default: `DefaultDictionary`
+   - `log_incoming_msg`: Log incoming messages? Boolean - default: `true`.
+   - `log_outgoing_msg`: Log outgoing messages? Boolean - default: `true`.
+   - `default_applverid`: String that specifies value of field `1137 (DefaultApplVerID)`. String - default: `"9"`.
+   - `logon_encrypt_method`: Value of field `98 (EncryptMethod)`. String - default: `"0"`.
+   - `heart_bt_int`: Value of field `108 (HeartBtInt)`. Integer - default: `60`.
+   - `max_output_buf_count`: Maximum number of messages in outbound queue (for resends)
+   - `reconnect_interval`: Interval, in seconds, between reconnection attempts. Integer - default: `15`.
+   - `reset_on_logon`: Field `141 (ResetSeqNumFlag)` for `Logon` mesage. Boolean - only `true` is
+      supported in this version.
+   - `validate_incoming_message`: Validate checksum (Field `10`) of received messages? Boolean - default: `true`.
+   - `transport_mod`: Socket implementation (`:gen_tcp`, `:ssl` or another module with the same interface). Default: `:ssl`.
+   - `transport_options`: Socket options
+   - `env`: Map with read-only values that is passed to `SessionHandler` callbacks
   """
 
   @spec start_session_initiator(String.t, String.t, String.t, SessionHandler, list()) :: :ok
   def start_session_initiator(session_name, sender_comp_id, target_comp_id,
-      session_handler, opts \\ []) do
+      session_handler, opts \\ [], session_registry \\ nil) do
     opts = Enum.into(opts, %{
       hostname: "localhost",
       port: 9876,
@@ -87,15 +88,15 @@ defmodule ExFix do
       raise ArgumentError, message: "reset_on_logon == true not supported"
     end
 
-    session_registry = opts[:session_registry] || @session_registry
+    session_registry = session_registry || @session_registry
     session_registry.start_session(session_name, config)
   end
 
   @doc """
-  Sends a FIX message to counterparty. This functions returns when the message is put on the wire.
+  Sends a FIX message to counterparty. This functions returns when the message is sent.
 
-  If session not exist, connection is not estabished, or session is not online and "logged in",
-  an exception is raised.
+  An exception is thrown if the session does not exist, the connection is not estabished, or
+  the session is not online nor "logged in".
 
   ## Parameters:
    - `out_message`. See `OutMessage` for more information
@@ -109,7 +110,7 @@ defmodule ExFix do
   @doc """
   Sends a FIX message to counterparty without waiting to check if the message already was sent.
 
-  If session not exist, an exception is raised.
+  If the session does not exist, an exception is thrown.
 
   Same parameters of `send_message!()`
   """
@@ -118,10 +119,10 @@ defmodule ExFix do
   end
 
   @doc """
-  Sends a list of messages. The session initiator will manage to send all the messages in an
-  efficient way, possibly in many chunks.
+  Sends a list of messages. The session initiator will send all the messages in an efficient
+  way, possibly in many chunks.
 
-  If session not exist, an exception is raised.
+  If the session does not exist, an exception is thrown.
   """
   @spec send_messages_async!([OutMessage.t], Session.session_name) :: :ok | no_return
   def send_messages_async!(out_messages, session_name) do
@@ -129,10 +130,9 @@ defmodule ExFix do
   end
 
   @doc """
-  Stops a FIX session.
+  Logout and disconnect.
 
-  Send a Logout message to FIX acceptor, wait up to 2 seconds for receive a "response"
-  and disconnects socket.
+  If the session does not exist, an exception is thrown.
   """
   @spec stop_session(Session.session_name, SessionRegistry | nil) :: :ok | no_return
   def stop_session(session_name, registry \\ nil) do
