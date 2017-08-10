@@ -40,15 +40,16 @@ defmodule ExFix do
    - log_incoming_msg: Boolean indicating if received messages will be logged, using `Logger`
    - log_outgoing_msg: Boolean indicating if sent messages will be logged, using `Logger`
    - default_applverid: String that specifies value of field `1137 (DefaultApplVerID)`
-   - logon_encrypt_method: TBD
-   - heart_bt_int: TBD
-   - max_output_buf_count: TBD
-   - reconnect_interval: TBD
-   - reset_on_logon: TBD
-   - validate_incoming_message: Validate checksum (field 10) of received messages?
+   - logon_encrypt_method: Field `98 (EncryptMethod)` for `Logon` mesage (String - default: "0")
+   - heart_bt_int: Field `108 (HeartBtInt)` for `Logon` mesage (Integer - default: 60)
+   - max_output_buf_count: Maximum number of messages in outbound queue (for resend)
+   - reconnect_interval: Interval, in seconds, between reconnection attempts (Integer - default: 15)
+   - reset_on_logon: Field `141 (ResetSeqNumFlag)` for `Logon` mesage (Boolean - only `true` is
+     supported in this version)
+   - validate_incoming_message: Validate checksum (Field `10`) of received messages?
    - transport_mod: Socket implementation (`:gen_tcp`, `:ssl` or another module with the same interface)
    - transport_options: Socket options
-   - env: TBD
+   - env: Map with read-only values that is passed to `SessionHandler` callbacks
   """
 
   @spec start_session_initiator(String.t, String.t, String.t, SessionHandler, list()) :: :ok
@@ -81,6 +82,11 @@ defmodule ExFix do
       target_comp_id: target_comp_id,
       session_handler: session_handler
     }, opts)
+
+    unless config.reset_on_logon do
+      raise ArgumentError, message: "reset_on_logon == true not supported"
+    end
+
     session_registry = opts[:session_registry] || @session_registry
     session_registry.start_session(session_name, config)
   end
