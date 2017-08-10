@@ -1,9 +1,5 @@
 defmodule ExFix.SessionTimer do
-  @moduledoc """
-  Keeps track of sent and received messages. Triggers a message with the
-  form `{:timeout, timer_name}` when no sent/received messages are registered
-  for a certain time.
-  """
+  @moduledoc false
 
   @doc """
   Sends a message `{:timeout, name}` when no messages are received for a certain time.

@@ -1,7 +1,5 @@
 defmodule ExFix.Serializer do
-  @moduledoc """
-  FIX message serialization
-  """
+  @moduledoc false
 
   alias ExFix.Session.MessageToSend
   alias ExFix.DateUtil

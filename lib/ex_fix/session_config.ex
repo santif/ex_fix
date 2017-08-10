@@ -1,7 +1,5 @@
 defmodule ExFix.SessionConfig do
-  @moduledoc """
-  FIX session configuration
-  """
+  @moduledoc false
 
   @enforce_keys [:name, :mode, :session_handler, :sender_comp_id, :target_comp_id]
   defstruct name: nil,

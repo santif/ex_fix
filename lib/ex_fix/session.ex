@@ -37,9 +37,7 @@ defmodule ExFix.Session do
     last_test_req_id_sent: nil
 
   defmodule MessageToSend do
-    @moduledoc """
-    Represents a FIX message sent to counterparty
-    """
+    @moduledoc false
 
     defstruct seqnum: 0,
       msg_type: nil,

@@ -1,7 +1,5 @@
 defmodule ExFix.SessionWorker do
-  @moduledoc """
-  FIX session worker
-  """
+  @moduledoc false
 
   require Logger
   use GenServer
