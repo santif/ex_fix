@@ -5,8 +5,8 @@ defmodule ExFix.FixDictionaryTest do
   test "" do
     fields = [{"1", "Account1"}, {"55", "Symbol"}, {"6", "1.234"}]
 
-    assert FixDictionary.get_field(fields, "AvgPx") == 1.234
+    assert FixDictionary.get_field("session1", fields, "AvgPx") == 1.234
 
-    assert FixDictionary.get_raw_field(fields, "6") == "1.234"
+    assert FixDictionary.get_field(fields, "6") == "1.234"
   end
 end
