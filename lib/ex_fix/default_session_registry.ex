@@ -1,7 +1,5 @@
 defmodule ExFix.DefaultSessionRegistry do
-  @moduledoc """
-  FIX Session registry - Tracks status of FIX sessions
-  """
+  @moduledoc false
 
   @behaviour ExFix.SessionRegistry
   use GenServer

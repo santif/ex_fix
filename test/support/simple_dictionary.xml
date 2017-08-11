@@ -1,0 +1,156 @@
+<fix type='FIX' major='5' minor='0' servicepack='2'>
+
+ <header />
+
+ <messages>
+
+  <message name='ExecutionReport' msgtype='8' msgcat='app'>
+   <field name='OrderID' required='Y' />
+   <field name='ClOrdID' required='N' />
+   <field name='OrigClOrdID' required='N' />
+   <field name='ExecID' required='Y' />
+   <field name='ExecType' required='Y' />
+   <field name='OrdStatus' required='Y' />
+   <component name='Instrument' required='Y' />
+   <field name='Side' required='Y' />
+   <field name='OrdType' required='N' />
+   <field name='Price' required='N' />
+   <field name='StopPx' required='N' />
+   <field name='LastQty' required='N' />
+   <field name='LastPx' required='N' />
+   <field name='LeavesQty' required='Y' />
+   <field name='CumQty' required='Y' />
+   <field name='AvgPx' required='N' />
+   <field name='Text' required='N' />
+  </message>
+
+  <message name='NewOrderSingle' msgtype='D' msgcat='app'>
+   <field name='ClOrdID' required='Y' />
+   <field name='Account' required='N' />
+   <field name='ExecInst' required='N' />
+   <component name='Instrument' required='Y' />
+   <field name='Side' required='Y' />
+   <field name='TransactTime' required='Y' />
+   <component name='OrderQtyData' required='Y' />
+   <field name='OrdType' required='Y' />
+   <field name='Price' required='N' />
+   <field name='StopPx' required='N' />
+   <field name='TimeInForce' required='N' />
+   <field name='ExpireDate' required='N' />
+   <field name='ExpireTime' required='N' />
+  </message>
+
+ </messages>
+
+ <trailer />
+
+ <components>
+  <component name='Instrument'>
+   <field name='Symbol' required='N' />
+   <field name='CFICode' required='N' />
+   <component name='InstrumentParties' required='N' />
+  </component>
+  <component name='InstrumentParties'>
+   <group name='NoInstrumentParties' required='N'>
+    <field name='InstrumentPartyID' required='N' />
+    <field name='InstrumentPartyIDSource' required='N' />
+    <field name='InstrumentPartyRole' required='N' />
+    <component name='InstrumentPtysSubGrp' required='N' />
+   </group>
+  </component>
+  <component name='InstrumentPtysSubGrp'>
+   <group name='NoInstrumentPartySubIDs' required='N'>
+    <field name='InstrumentPartySubID' required='N' />
+    <field name='InstrumentPartySubIDType' required='N' />
+   </group>
+  </component>
+  <component name='OrderQtyData'>
+   <field name='OrderQty' required='N' />
+   <field name='CashOrderQty' required='N' />
+   <field name='OrderPercent' required='N' />
+   <field name='RoundingDirection' required='N' />
+   <field name='RoundingModulus' required='N' />
+  </component>
+ </components>
+
+ <fields>
+  <field number='1' name='Account' type='STRING' />
+  <field number='6' name='AvgPx' type='PRICE' />
+  <field number='11' name='ClOrdID' type='STRING' />
+  <field number='14' name='CumQty' type='QTY' />
+  <field number='17' name='ExecID' type='STRING' />
+  <field number='18' name='ExecInst' type='MULTIPLECHARVALUE'>
+   <value enum='G' description='ALL_OR_NONE' />
+   <value enum='Z' description='CANCEL_IF_NOT_BEST' />
+  </field>
+  <field number='31' name='LastPx' type='PRICE' />
+  <field number='32' name='LastQty' type='QTY' />
+  <field number='37' name='OrderID' type='STRING' />
+  <field number='38' name='OrderQty' type='QTY' />
+  <field number='39' name='OrdStatus' type='CHAR'>
+   <value enum='0' description='NEW' />
+   <value enum='1' description='PARTIALLY_FILLED' />
+   <value enum='2' description='FILLED' />
+   <value enum='4' description='CANCELED' />
+   <value enum='5' description='REPLACED' />
+   <value enum='8' description='REJECTED' />
+   <value enum='9' description='SUSPENDED' />
+  </field>
+  <field number='40' name='OrdType' type='CHAR'>
+   <value enum='1' description='MARKET' />
+   <value enum='2' description='LIMIT' />
+   <value enum='3' description='STOP' />
+   <value enum='4' description='STOP_LIMIT' />
+   <value enum='K' description='MARKET_WITH_LEFT_OVER_AS_LIMIT' />
+  </field>
+  <field number='41' name='OrigClOrdID' type='STRING' />
+  <field number='44' name='Price' type='PRICE' />
+  <field number='54' name='Side' type='CHAR'>
+   <value enum='1' description='BUY' />
+   <value enum='2' description='SELL' />
+   <value enum='F' description='LEND' />
+   <value enum='G' description='BORROW' />
+  </field>
+  <field number='55' name='Symbol' type='STRING' />
+  <field number='58' name='Text' type='STRING' />
+  <field number='59' name='TimeInForce' type='CHAR'>
+   <value enum='0' description='DAY' />
+   <value enum='1' description='GOOD_TILL_CANCEL' />
+   <value enum='3' description='IMMEDIATE_OR_CANCEL' />
+   <value enum='4' description='FILL_OR_KILL' />
+   <value enum='6' description='GOOD_TILL_DATE' />
+  </field>
+  <field number='60' name='TransactTime' type='UTCTIMESTAMP' />
+  <field number='99' name='StopPx' type='PRICE' />
+  <field number='126' name='ExpireTime' type='UTCTIMESTAMP' />
+  <field number='150' name='ExecType' type='CHAR'>
+   <value enum='0' description='NEW' />
+   <value enum='4' description='CANCELED' />
+   <value enum='5' description='REPLACED' />
+   <value enum='6' description='PENDING_CANCEL' />
+   <value enum='7' description='STOPPED' />
+   <value enum='8' description='REJECTED' />
+   <value enum='9' description='SUSPENDED' />
+   <value enum='C' description='EXPIRED' />
+  </field>
+  <field number='151' name='LeavesQty' type='QTY' />
+  <field number='152' name='CashOrderQty' type='QTY' />
+  <field number='432' name='ExpireDate' type='LOCALMKTDATE' />
+  <field number='461' name='CFICode' type='STRING' />
+  <field number='468' name='RoundingDirection' type='CHAR'>
+   <value enum='0' description='ROUND_TO_NEAREST' />
+   <value enum='1' description='ROUND_DOWN' />
+   <value enum='2' description='ROUND_UP' />
+  </field>
+  <field number='469' name='RoundingModulus' type='FLOAT' />
+  <field number='516' name='OrderPercent' type='PERCENTAGE' />
+  <field number='1018' name='NoInstrumentParties' type='NUMINGROUP' />
+  <field number='1019' name='InstrumentPartyID' type='STRING' />
+  <field number='1050' name='InstrumentPartyIDSource' type='CHAR' />
+  <field number='1051' name='InstrumentPartyRole' type='INT' />
+  <field number='1052' name='NoInstrumentPartySubIDs' type='NUMINGROUP' />
+  <field number='1053' name='InstrumentPartySubID' type='STRING' />
+  <field number='1054' name='InstrumentPartySubIDType' type='INT' />
+ </fields>
+
+</fix>

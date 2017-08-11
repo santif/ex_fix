@@ -1,7 +1,5 @@
 defmodule ExFix.DateUtil do
-  @moduledoc """
-  FIX DateTime related functions
-  """
+  @moduledoc false
   alias Calendar.DateTime.Format
 
   @compile {:inline, pad2: 1, pad3: 1}

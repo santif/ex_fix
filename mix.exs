@@ -12,6 +12,8 @@ defmodule ExFix.Mixfile do
      test_coverage: [tool: ExCoveralls],
      preferred_cli_env: ["coveralls": :test, "coveralls.detail": :test,
       "coveralls.post": :test, "coveralls.html": :test],
+     docs: [main: "readme",
+            extras: ["README.md"]],
      deps: deps()]
   end
 
@@ -34,11 +36,12 @@ defmodule ExFix.Mixfile do
   end
 
   defp deps do
-    [{:calendar, "~> 0.17.3"},
-     {:benchfella, "~> 0.3.0"},
-    #  {:ex_doc, "~> 0.14", only: :dev, runtime: false},
+    [{:calendar, ">= 0.16.0"},
+     {:sweet_xml, ">= 0.6.4"},
+     {:benchfella, ">= 0.3.0", runtime: false},
+     {:ex_doc, "~> 0.14", only: :dev, runtime: false},
      {:excoveralls, "~> 0.7", only: :test},
      {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
-     {:credo, "~> 0.8", only: [:dev, :test], runtime: false}]
+     {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false}]
   end
 end
