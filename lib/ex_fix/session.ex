@@ -84,6 +84,8 @@ defmodule ExFix.Session do
   @field_gap_fill                "123"
   @field_new_seq_no               "36"
 
+  @warning_on_garbled_messages Application.get_env(:ex_fix, :warning_on_garbled_messages)
+
   ##
   ## API
   ##
@@ -426,10 +428,12 @@ defmodule ExFix.Session do
   @spec process_invalid_message(Session.t, integer(), InMessage.t) :: session_result
   def process_invalid_message(session, _expected_seqnum, %InMessage{valid: false,
       error_reason: :garbled} = msg) do
-    Logger.warn fn ->
-      %Session{config: %SessionConfig{name: session_name}} = session
-      "[fix.warning] [#{session_name}] Garbled: " <>
-        :unicode.characters_to_binary(msg.original_fix_msg, :latin1, :utf8)
+    if @warning_on_garbled_messages do
+      Logger.warn fn ->
+        %Session{config: %SessionConfig{name: session_name}} = session
+        "[fix.warning] [#{session_name}] Garbled: " <>
+          :unicode.characters_to_binary(msg.original_fix_msg, :latin1, :utf8)
+      end
     end
     {:ok, [], %Session{session | extra_bytes: msg.other_msgs}}
   end
