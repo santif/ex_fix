@@ -119,6 +119,33 @@ defmodule ExFix.Parser do
     {name, value} = parse_field(pair)
     do_parse(rest2, nil, [{name, value} | acc])
   end
+  defp do_parse(binmsg, [subject_field1, subject_field2] = subject_fields, acc) do
+    [pair, rest2] = :binary.split(binmsg, << @soh >>)
+    {name, value} = parse_field(pair)
+    case name == subject_field1 do
+      true ->
+        fields = :lists.reverse([{name, value} | acc])
+        case :lists.keyfind(subject_field2, 1, fields) do
+          {^subject_field2, value2} ->
+            {:ok, [value, value2], fields, rest2}
+          _ ->
+            do_parse(rest2, subject_fields, [{name, value} | acc])    
+        end
+      false ->
+        case name == subject_field2 do
+          true ->
+            fields = :lists.reverse([{name, value} | acc])
+            case :lists.keyfind(subject_field1, 1, fields) do
+              {^subject_field1, value1} ->
+                {:ok, [value1, value], fields, rest2}
+              _ ->
+                do_parse(rest2, subject_fields, [{name, value} | acc])    
+            end
+          false ->
+            do_parse(rest2, subject_fields, [{name, value} | acc])
+        end
+    end
+  end
   defp do_parse(binmsg, subject_field, acc) do
     [pair, rest2] = :binary.split(binmsg, << @soh >>)
     {name, value} = parse_field(pair)

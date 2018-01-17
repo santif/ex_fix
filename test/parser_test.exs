@@ -100,4 +100,69 @@ defmodule ExFix.ParserTest do
     assert fix_msg.error_reason == :garbled
     assert fix_msg.original_fix_msg == data
   end
+
+  test "Parse message - stage 1 - subject with 2 fields" do
+    data = msg("8=FIXT.1.1|9=$$$|35=y|34=12345|49=MARKET|52=20161007-16:28:50.802" <>
+      "|56=INITIATOR|1300=SEGMENT1|1301=MARKET1|55=SYMBOL1|107=Symbol1Desc" <>
+      "|55=SYMBOL2|107=Symbol2Desc|55=SYMBOL3|107=Symbol3Desc|10=$$$|")
+    fix_msg = Parser.parse1(data, Dictionary, 12_345)
+    assert fix_msg.valid == true
+    assert fix_msg.complete == false
+    assert fix_msg.subject == ["MARKET1", "SEGMENT1"]
+    assert fix_msg.original_fix_msg == data
+    assert fix_msg.fields == [
+      {"35", "y"},
+      {"34", "12345"},
+      {"49", "MARKET"},
+      {"52", "20161007-16:28:50.802"},
+      {"56", "INITIATOR"},
+      {"1300", "SEGMENT1"},
+      {"1301", "MARKET1"},
+    ]
+  end
+
+  test "Parse message - stage 1 - subject with 2 fields (reverse order)" do
+    data = msg("8=FIXT.1.1|9=$$$|35=y|34=12345|49=MARKET|52=20161007-16:28:50.802" <>
+      "|56=INITIATOR|1301=MARKET1|1300=SEGMENT1|55=SYMBOL1|107=Symbol1Desc" <>
+      "|55=SYMBOL2|107=Symbol2Desc|55=SYMBOL3|107=Symbol3Desc|10=$$$|")
+    fix_msg = Parser.parse1(data, Dictionary, 12_345)
+    assert fix_msg.valid == true
+    assert fix_msg.complete == false
+    assert fix_msg.subject == ["MARKET1", "SEGMENT1"]
+    assert fix_msg.original_fix_msg == data
+    assert fix_msg.fields == [
+      {"35", "y"},
+      {"34", "12345"},
+      {"49", "MARKET"},
+      {"52", "20161007-16:28:50.802"},
+      {"56", "INITIATOR"},
+      {"1301", "MARKET1"},
+      {"1300", "SEGMENT1"},
+    ]
+  end
+
+  test "Parse message - stage 1 - subject with 2 fields - one field is not present" do
+    data = msg("8=FIXT.1.1|9=$$$|35=y|34=12345|49=MARKET|52=20161007-16:28:50.802" <>
+      "|56=INITIATOR|1301=MARKET1|55=SYMBOL1|107=Symbol1Desc" <>
+      "|55=SYMBOL2|107=Symbol2Desc|55=SYMBOL3|107=Symbol3Desc|10=$$$|")
+    fix_msg = Parser.parse1(data, Dictionary, 12_345)
+    assert fix_msg.valid == true
+    assert fix_msg.complete == true
+    assert fix_msg.subject == nil
+    assert fix_msg.original_fix_msg == data
+    assert fix_msg.fields == [
+      {"35", "y"},
+      {"34", "12345"},
+      {"49", "MARKET"},
+      {"52", "20161007-16:28:50.802"},
+      {"56", "INITIATOR"},
+      {"1301", "MARKET1"},
+      {"55", "SYMBOL1"},
+      {"107", "Symbol1Desc"},
+      {"55", "SYMBOL2"},
+      {"107", "Symbol2Desc"},
+      {"55", "SYMBOL3"},
+      {"107", "Symbol3Desc"},
+    ]
+  end
 end

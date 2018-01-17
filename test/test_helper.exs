@@ -128,7 +128,14 @@ defmodule ExFix.TestHelper do
   defmodule InMessageTestDict do
     @behaviour ExFix.Dictionary
 
-    def subject("8"), do: "1"  ## 8 (ExecutionReport) subject: 1 (Account)
+    @execution_report_msg_type "8"
+    @seclist_msg_type "y"
+    @account_field "1"
+    @market_id "1301"
+    @market_segment_id "1300"
+
+    def subject(@execution_report_msg_type), do: @account_field
+    def subject(@seclist_msg_type), do: [@market_id, @market_segment_id]
     def subject(_), do: nil
   end
 
