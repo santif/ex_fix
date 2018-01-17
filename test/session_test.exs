@@ -9,34 +9,42 @@ defmodule ExFix.SessionTest do
   alias ExFix.InMessage
   alias ExFix.TestHelper.FixDummySessionHandler
 
-  @msg_type_logon             "A"
-  @msg_type_heartbeat         "0"
-  @msg_type_test_request      "1"
-  @msg_type_resend_request    "2"
-  @msg_type_reject            "3"
-  @msg_type_sequence_reset    "4"
-  @msg_type_logout            "5"
+  @msg_type_logon "A"
+  @msg_type_heartbeat "0"
+  @msg_type_test_request "1"
+  @msg_type_resend_request "2"
+  @msg_type_reject "3"
+  @msg_type_sequence_reset "4"
+  @msg_type_logout "5"
 
   # Some application message types for testing
-  @msg_type_new_order_single  "D"
-  @msg_type_execution_report  "8"
+  @msg_type_new_order_single "D"
+  @msg_type_execution_report "8"
 
   # App fields used in tests
-  @field_account        "1"
-  @field_begin_seq_no   "7"
-  @field_end_seq_no    "16"
-  @field_new_seq_no    "36"
-  @field_gap_fill     "123"
+  @field_account "1"
+  @field_begin_seq_no "7"
+  @field_end_seq_no "16"
+  @field_new_seq_no "36"
+  @field_gap_fill "123"
 
-  @t0        Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 2}}, "Etc/UTC")
-  @t_plus_1  Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 3}}, "Etc/UTC")
-  @t_plus_2  Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 4}}, "Etc/UTC")
+  @t0 Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 2}}, "Etc/UTC")
+  @t_plus_1 Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 3}}, "Etc/UTC")
+  @t_plus_2 Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 4}}, "Etc/UTC")
 
   setup do
-    config = %SessionConfig{name: "test", mode: :initiator, sender_comp_id: "BUYSIDE",
-      target_comp_id: "SELLSIDE", username: "testuser", password: "testpwd",
-      session_handler: FixDummySessionHandler, dictionary: ExFix.DefaultDictionary,
-      time_service: @t0}
+    config = %SessionConfig{
+      name: "test",
+      mode: :initiator,
+      sender_comp_id: "BUYSIDE",
+      target_comp_id: "SELLSIDE",
+      username: "testuser",
+      password: "testpwd",
+      session_handler: FixDummySessionHandler,
+      dictionary: ExFix.DefaultDictionary,
+      time_service: @t0
+    }
+
     {:ok, config: config}
   end
 
@@ -49,15 +57,37 @@ defmodule ExFix.SessionTest do
     {:ok, msgs_to_send, session} = Session.session_start(session)
 
     assert Session.get_status(session) == :connecting
-    expected_fields = [{"98", "0"}, {"108", 60}, {"141", true},
-      {"553", "testuser"}, {"554", "testpwd"}, {"1137", "9"}]
-    assert msgs_to_send == [%MessageToSend{
-      seqnum: 1, msg_type: @msg_type_logon, sender: "BUYSIDE",
-      orig_sending_time: @t0, target: "SELLSIDE", body: expected_fields}]
 
-    incoming_data = build_message(@msg_type_logon, 1, "SELLSIDE", "BUYSIDE",
-      @t_plus_1, [{"Username", "testuser"}, {"Password", "testpwd"}, {"EncryptMethod", "0"},
-        {"HeartBtInt", 120}, {"ResetSeqNumFlag", true}, {"DefaultApplVerID", "9"}])
+    expected_fields = [
+      {"98", "0"},
+      {"108", 60},
+      {"141", true},
+      {"553", "testuser"},
+      {"554", "testpwd"},
+      {"1137", "9"}
+    ]
+
+    assert msgs_to_send == [
+             %MessageToSend{
+               seqnum: 1,
+               msg_type: @msg_type_logon,
+               sender: "BUYSIDE",
+               orig_sending_time: @t0,
+               target: "SELLSIDE",
+               body: expected_fields
+             }
+           ]
+
+    incoming_data =
+      build_message(@msg_type_logon, 1, "SELLSIDE", "BUYSIDE", @t_plus_1, [
+        {"Username", "testuser"},
+        {"Password", "testpwd"},
+        {"EncryptMethod", "0"},
+        {"HeartBtInt", 120},
+        {"ResetSeqNumFlag", true},
+        {"DefaultApplVerID", "9"}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -68,8 +98,12 @@ defmodule ExFix.SessionTest do
   test "Execution Report received", %{config: cfg} do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
-    incoming_data = build_message(@msg_type_execution_report, 11, "SELLSIDE", "BUYSIDE",
-      @t_plus_1, [{@field_account, "1234"}])
+
+    incoming_data =
+      build_message(@msg_type_execution_report, 11, "SELLSIDE", "BUYSIDE", @t_plus_1, [
+        {@field_account, "1234"}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
     assert Session.get_status(session) == :online
@@ -83,11 +117,16 @@ defmodule ExFix.SessionTest do
     assert byte_size(Session.get_extra_bytes(session)) == 0
 
     seq = 11
-    incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.802|" <>
-      "56=BUYSIDE|1=1557|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
-      "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
-      "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|")
-    << seg1::binary-size(100), seg2::binary-size(100), seg3::binary() >> = incoming_data
+
+    incoming_data =
+      msg(
+        "8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.802|" <>
+          "56=BUYSIDE|1=1557|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
+          "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
+          "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|"
+      )
+
+    <<seg1::binary-size(100), seg2::binary-size(100), seg3::binary()>> = incoming_data
 
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, seg1)
     assert msgs_to_send == []
@@ -112,16 +151,26 @@ defmodule ExFix.SessionTest do
     assert byte_size(Session.get_extra_bytes(session)) == 0
 
     seq = 11
-    incoming_data1 = msg("8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.802|" <>
-      "56=BUYSIDE|1=1557|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
-      "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
-      "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|")
+
+    incoming_data1 =
+      msg(
+        "8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.802|" <>
+          "56=BUYSIDE|1=1557|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
+          "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
+          "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|"
+      )
+
     seq = 12
-    incoming_data2 = msg("8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.803|" <>
-      "56=BUYSIDE|1=1558|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
-      "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
-      "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|")
-    incoming_data = << incoming_data1::binary(), incoming_data2::binary() >>
+
+    incoming_data2 =
+      msg(
+        "8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.803|" <>
+          "56=BUYSIDE|1=1558|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
+          "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
+          "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|"
+      )
+
+    incoming_data = <<incoming_data1::binary(), incoming_data2::binary()>>
 
     {:continue, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
     assert msgs_to_send == []
@@ -142,18 +191,27 @@ defmodule ExFix.SessionTest do
     assert byte_size(Session.get_extra_bytes(session)) == 0
 
     seq = 11
-    msg1 = msg("8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.802|" <>
-      "56=BUYSIDE|1=1557|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
-      "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
-      "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|")
-    seq = 12
-    msg2 = msg("8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.803|" <>
-      "56=BUYSIDE|1=1558|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
-      "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
-      "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|")
 
-    << seg1::binary-size(100), incoming_data2::binary() >> = msg2
-    incoming_data1 = << msg1::binary(), seg1::binary() >>
+    msg1 =
+      msg(
+        "8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.802|" <>
+          "56=BUYSIDE|1=1557|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
+          "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
+          "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|"
+      )
+
+    seq = 12
+
+    msg2 =
+      msg(
+        "8=FIXT.1.1|9=$$$|35=8|34=#{seq}|49=SELLSIDE|52=20161007-16:28:50.803|" <>
+          "56=BUYSIDE|1=1558|6=18050.000|11=clordid12345|14=5|17=T3231110|31=18050|" <>
+          "32=5|37=76733014|38=5|39=2|40=2|44=18050|54=1|55=Symbol1|58=Filled|59=0|" <>
+          "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|"
+      )
+
+    <<seg1::binary-size(100), incoming_data2::binary()>> = msg2
+    incoming_data1 = <<msg1::binary(), seg1::binary()>>
 
     {:continue, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data1)
     assert msgs_to_send == []
@@ -180,14 +238,24 @@ defmodule ExFix.SessionTest do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-    incoming_data = build_message(@msg_type_new_order_single, 12, "SELLSIDE", "BUYSIDE",
-      @t_plus_1, [{@field_account, "1234"}])
+    incoming_data =
+      build_message(@msg_type_new_order_single, 12, "SELLSIDE", "BUYSIDE", @t_plus_1, [
+        {@field_account, "1234"}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
-    assert msgs_to_send == [%MessageToSend{seqnum: 6, msg_type: @msg_type_resend_request,
-      sender: "BUYSIDE", orig_sending_time: @t_plus_1, target: "SELLSIDE",
-      body: [{"7", 11}, {"16", 11}]}]
+    assert msgs_to_send == [
+             %MessageToSend{
+               seqnum: 6,
+               msg_type: @msg_type_resend_request,
+               sender: "BUYSIDE",
+               orig_sending_time: @t_plus_1,
+               target: "SELLSIDE",
+               body: [{"7", 11}, {"16", 11}]
+             }
+           ]
 
     assert Session.get_in_queue_length(session) == 1
     assert Session.get_in_lastseq(session) == 10
@@ -207,8 +275,12 @@ defmodule ExFix.SessionTest do
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
     seq = 9
-    incoming_data = build_message(@msg_type_execution_report, seq, "SELLSIDE", "BUYSIDE",
-      @t_plus_1, [{@field_account, "1234"}])
+
+    incoming_data =
+      build_message(@msg_type_execution_report, seq, "SELLSIDE", "BUYSIDE", @t_plus_1, [
+        {@field_account, "1234"}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -222,8 +294,9 @@ defmodule ExFix.SessionTest do
     assert logout.sender == "BUYSIDE"
     assert logout.target == "SELLSIDE"
     assert logout.orig_sending_time == @t_plus_1
+
     assert :lists.keyfind("58", 1, logout.body) ==
-      {"58", "MsgSeqNum too low, expecting 11 but received 9"}
+             {"58", "MsgSeqNum too low, expecting 11 but received 9"}
   end
 
   test "Garbled message received - 1 (p. 49)", %{config: cfg} do
@@ -254,7 +327,9 @@ defmodule ExFix.SessionTest do
     assert length(msgs_to_send) == 0
   end
 
-  test "PossDupFlag=Y, OrigSendingTime<=SendingTime and MsgSeqNum<Expected (p. 50)", %{config: cfg} do
+  test "PossDupFlag=Y, OrigSendingTime<=SendingTime and MsgSeqNum<Expected (p. 50)", %{
+    config: cfg
+  } do
     # 1. Check to see if MsgSeqNum has already been received.
     # 2. If already received then ignore the message, otherwise accept and process the message.
 
@@ -264,8 +339,19 @@ defmodule ExFix.SessionTest do
     seq = 9
     resend = true
     orig_sending_time = @t0
-    incoming_data = build_message(@msg_type_execution_report, seq, "SELLSIDE", "BUYSIDE",
-      @t_plus_1, [{@field_account, "1234"}], orig_sending_time, resend)
+
+    incoming_data =
+      build_message(
+        @msg_type_execution_report,
+        seq,
+        "SELLSIDE",
+        "BUYSIDE",
+        @t_plus_1,
+        [{@field_account, "1234"}],
+        orig_sending_time,
+        resend
+      )
+
     session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -273,7 +359,9 @@ defmodule ExFix.SessionTest do
     assert length(msgs_to_send) == 0
   end
 
-  test "PossDupFlag=Y, OrigSendingTime > SendingTime and MsgSeqNum=Expected (p. 50)", %{config: cfg} do
+  test "PossDupFlag=Y, OrigSendingTime > SendingTime and MsgSeqNum=Expected (p. 50)", %{
+    config: cfg
+  } do
     # 1. Send Reject (session-level) message referencing inaccurate SendingTime: "SendingTime acccuracy problem")
     # 2. Increment inbound MsgSeqNum
     # 3. Optional flow - send Logout - p. 50
@@ -284,8 +372,19 @@ defmodule ExFix.SessionTest do
     seq = 11
     resend = true
     orig_sending_time = @t_plus_2
-    incoming_data = build_message(@msg_type_execution_report, seq, "SELLSIDE", "BUYSIDE",
-      @t_plus_1, [{@field_account, "1234"}], orig_sending_time, resend)
+
+    incoming_data =
+      build_message(
+        @msg_type_execution_report,
+        seq,
+        "SELLSIDE",
+        "BUYSIDE",
+        @t_plus_1,
+        [{@field_account, "1234"}],
+        orig_sending_time,
+        resend
+      )
+
     session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -314,8 +413,12 @@ defmodule ExFix.SessionTest do
     msg_seqnum = 11
     poss_dup_flag = "Y"
     ## TODO replace all hardcoded datetimes with DateUtil.serialize_date
-    incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
-      "43=#{poss_dup_flag}|52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|")
+    incoming_data =
+      msg(
+        "8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
+          "43=#{poss_dup_flag}|52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|"
+      )
+
     session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -331,7 +434,9 @@ defmodule ExFix.SessionTest do
     assert reject_msg.target == "SELLSIDE"
     assert reject_msg.orig_sending_time == @t_plus_1
     assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "1"}
-    assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "Required tag missing: OrigSendingTime"}
+
+    assert :lists.keyfind("58", 1, reject_msg.body) ==
+             {"58", "Required tag missing: OrigSendingTime"}
   end
 
   test "BeginString value received did not match value expected (p. 51)", %{config: cfg} do
@@ -344,8 +449,13 @@ defmodule ExFix.SessionTest do
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
     msg_seqnum = 11
-    incoming_data = msg("8=INCORRECT_BEGIN_STRING|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
-      "52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|")
+
+    incoming_data =
+      msg(
+        "8=INCORRECT_BEGIN_STRING|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
+          "52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|"
+      )
+
     session = Session.set_time(session, @t_plus_1)
     {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -375,8 +485,12 @@ defmodule ExFix.SessionTest do
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
     seq = 11
-    incoming_data = build_message(@msg_type_execution_report, seq, "OTHER_SELLSIDE", "BUYSIDE",
-      @t_plus_1, [{@field_account, "1234"}])
+
+    incoming_data =
+      build_message(@msg_type_execution_report, seq, "OTHER_SELLSIDE", "BUYSIDE", @t_plus_1, [
+        {@field_account, "1234"}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -414,8 +528,12 @@ defmodule ExFix.SessionTest do
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
     seq = 11
-    incoming_data = build_message(@msg_type_execution_report, seq, "SELLSIDE", "OTHER_BUYSIDE",
-      @t_plus_1, [{@field_account, "1234"}])
+
+    incoming_data =
+      build_message(@msg_type_execution_report, seq, "SELLSIDE", "OTHER_BUYSIDE", @t_plus_1, [
+        {@field_account, "1234"}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -449,8 +567,13 @@ defmodule ExFix.SessionTest do
 
     msg_seqnum = 11
     incorrect_body_length = 5
-    incoming_data = msg("8=FIXT.1.1|9=#{incorrect_body_length}|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
-      "52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|")
+
+    incoming_data =
+      msg(
+        "8=FIXT.1.1|9=#{incorrect_body_length}|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
+          "52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|"
+      )
+
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
@@ -467,8 +590,13 @@ defmodule ExFix.SessionTest do
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
     msg_seqnum = 11
-    incoming_data = msg("8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
-      "52=20170717-17:50:56.123|56=BUYSIDE|10=ERR")
+
+    incoming_data =
+      msg(
+        "8=FIXT.1.1|9=$$$|35=8|34=#{msg_seqnum}|49=SELLSIDE|" <>
+          "52=20170717-17:50:56.123|56=BUYSIDE|10=ERR"
+      )
+
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
@@ -541,27 +669,42 @@ defmodule ExFix.SessionTest do
 
     fields = [{"55", "ABC1"}, {"44", 4.56}]
 
-    out_msg = OutMessage.new("D")
-    |> OutMessage.set_field(@field_account, "acc1")
-    |> OutMessage.set_fields(fields)
-    {:ok, _, session} = Session.send_message(session, out_msg) # seqnum 2
+    out_msg =
+      OutMessage.new("D")
+      |> OutMessage.set_field(@field_account, "acc1")
+      |> OutMessage.set_fields(fields)
 
-    out_msg = OutMessage.new("D")
-    |> OutMessage.set_field(@field_account, "acc2")
-    |> OutMessage.set_fields(fields)
-    {:ok, _, session} = Session.send_message(session, out_msg) # seqnum 3
+    # seqnum 2
+    {:ok, _, session} = Session.send_message(session, out_msg)
+
+    out_msg =
+      OutMessage.new("D")
+      |> OutMessage.set_field(@field_account, "acc2")
+      |> OutMessage.set_fields(fields)
+
+    # seqnum 3
+    {:ok, _, session} = Session.send_message(session, out_msg)
 
     out_msg = OutMessage.new("0")
-    {:ok, _, session} = Session.send_message(session, out_msg) # seqnum 4 (heartbeat)
+    # seqnum 4 (heartbeat)
+    {:ok, _, session} = Session.send_message(session, out_msg)
 
-    out_msg = OutMessage.new("D")
-    |> OutMessage.set_field(@field_account, "acc3")
-    |> OutMessage.set_fields(fields)
-    {:ok, _, session} = Session.send_message(session, out_msg) # seqnum 5
+    out_msg =
+      OutMessage.new("D")
+      |> OutMessage.set_field(@field_account, "acc3")
+      |> OutMessage.set_fields(fields)
+
+    # seqnum 5
+    {:ok, _, session} = Session.send_message(session, out_msg)
 
     seq = 2
-    incoming_data = build_message(@msg_type_resend_request, seq, "SELLSIDE", "BUYSIDE", @t_plus_1,
-      [{@field_begin_seq_no, 2}, {@field_end_seq_no, 5}])
+
+    incoming_data =
+      build_message(@msg_type_resend_request, seq, "SELLSIDE", "BUYSIDE", @t_plus_1, [
+        {@field_begin_seq_no, 2},
+        {@field_end_seq_no, 5}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:resend, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -595,8 +738,13 @@ defmodule ExFix.SessionTest do
     seq = 13
     new_seq_no = 14
     gap_fill = true
-    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t_plus_1,
-      [{@field_new_seq_no, new_seq_no}, {@field_gap_fill, gap_fill}])
+
+    incoming_data =
+      build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t_plus_1, [
+        {@field_new_seq_no, new_seq_no},
+        {@field_gap_fill, gap_fill}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -628,8 +776,13 @@ defmodule ExFix.SessionTest do
     seq = 11
     new_seq_no = 14
     gap_fill = true
-    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t_plus_1,
-      [{@field_new_seq_no, new_seq_no}, {@field_gap_fill, gap_fill}])
+
+    incoming_data =
+      build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t_plus_1, [
+        {@field_new_seq_no, new_seq_no},
+        {@field_gap_fill, gap_fill}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -639,28 +792,42 @@ defmodule ExFix.SessionTest do
     assert length(msgs_to_send) == 0
   end
 
-    test "SeqResetGapFill w/NewSeqNo>MsgSeqNum AND MsgSeqNum<Expected AND PossDupFlag=Y (p. 56)", %{config: cfg} do
-      ## Ignore message
+  test "SeqResetGapFill w/NewSeqNo>MsgSeqNum AND MsgSeqNum<Expected AND PossDupFlag=Y (p. 56)", %{
+    config: cfg
+  } do
+    ## Ignore message
 
-      {:ok, session} = Session.init(cfg)
-      session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-      seq = 9
-      new_seq_no = 14
-      gap_fill = true
-      resend = true
-      incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t_plus_1,
-        [{@field_new_seq_no, new_seq_no}, {@field_gap_fill, gap_fill}], @t_plus_1, resend)
-      session = Session.set_time(session, @t_plus_1)
-      {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+    seq = 9
+    new_seq_no = 14
+    gap_fill = true
+    resend = true
 
-      assert Session.get_status(session) == :online
-      assert Session.get_in_lastseq(session) == 10
+    incoming_data =
+      build_message(
+        @msg_type_sequence_reset,
+        seq,
+        "SELLSIDE",
+        "BUYSIDE",
+        @t_plus_1,
+        [{@field_new_seq_no, new_seq_no}, {@field_gap_fill, gap_fill}],
+        @t_plus_1,
+        resend
+      )
 
-      assert length(msgs_to_send) == 0
-    end
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
-  test "SeqResetGapFill w/NewSeqNo>MsgSeqNum AND MsgSeqNum<Expected AND PossDupFlag!=Y (p. 56)", %{config: cfg} do
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == 10
+
+    assert length(msgs_to_send) == 0
+  end
+
+  test "SeqResetGapFill w/NewSeqNo>MsgSeqNum AND MsgSeqNum<Expected AND PossDupFlag!=Y (p. 56)",
+       %{config: cfg} do
     # 1. Send Logout message with text "MsgSeqNum too low, expecting X received Y"
     # 2. Optional - Wait for Logout message response (note likely will have inaccurate MsgSeqNum)
     #    or wait 2 seconds whichever comes first
@@ -673,8 +840,13 @@ defmodule ExFix.SessionTest do
     seq = 9
     new_seq_no = 14
     gap_fill = true
-    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0,
-      [{@field_new_seq_no, new_seq_no}, {@field_gap_fill, gap_fill}])
+
+    incoming_data =
+      build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0, [
+        {@field_new_seq_no, new_seq_no},
+        {@field_gap_fill, gap_fill}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -687,8 +859,9 @@ defmodule ExFix.SessionTest do
     assert logout_msg.sender == "BUYSIDE"
     assert logout_msg.target == "SELLSIDE"
     assert logout_msg.orig_sending_time == @t_plus_1
+
     assert :lists.keyfind("58", 1, logout_msg.body) ==
-      {"58", "MsgSeqNum too low, expecting 11 but received 9"}
+             {"58", "MsgSeqNum too low, expecting 11 but received 9"}
   end
 
   test "SeqResetGapFill with NewSeqNo<=MsgSeqNum AND MsgSeqNum=Expected (p. 57)", %{config: cfg} do
@@ -700,8 +873,13 @@ defmodule ExFix.SessionTest do
     seq = 11
     new_seq_no = 10
     gap_fill = true
-    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0,
-      [{@field_new_seq_no, new_seq_no}, {@field_gap_fill, gap_fill}])
+
+    incoming_data =
+      build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0, [
+        {@field_new_seq_no, new_seq_no},
+        {@field_gap_fill, gap_fill}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -716,8 +894,9 @@ defmodule ExFix.SessionTest do
     assert reject_msg.sender == "BUYSIDE"
     assert reject_msg.target == "SELLSIDE"
     assert reject_msg.orig_sending_time == @t_plus_1
+
     assert :lists.keyfind("58", 1, reject_msg.body) ==
-      {"58", "Attempt to lower sequence number, invalid value NewSeqNum=10"}
+             {"58", "Attempt to lower sequence number, invalid value NewSeqNum=10"}
   end
 
   test "Receive SeqReset (reset) with NewSeqNum > than expected seq num (p. 57)", %{config: cfg} do
@@ -729,8 +908,12 @@ defmodule ExFix.SessionTest do
 
     seq = 11
     new_seq_no = 15
-    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0,
-      [{@field_new_seq_no, new_seq_no}])
+
+    incoming_data =
+      build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0, [
+        {@field_new_seq_no, new_seq_no}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -748,8 +931,12 @@ defmodule ExFix.SessionTest do
 
     seq = 11
     new_seq_no = 11
-    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0,
-      [{@field_new_seq_no, new_seq_no}])
+
+    incoming_data =
+      build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0, [
+        {@field_new_seq_no, new_seq_no}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -771,8 +958,12 @@ defmodule ExFix.SessionTest do
 
     seq = 11
     new_seq_no = 9
-    incoming_data = build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0,
-      [{@field_new_seq_no, new_seq_no}])
+
+    incoming_data =
+      build_message(@msg_type_sequence_reset, seq, "SELLSIDE", "BUYSIDE", @t0, [
+        {@field_new_seq_no, new_seq_no}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -787,8 +978,9 @@ defmodule ExFix.SessionTest do
     assert reject_msg.sender == "BUYSIDE"
     assert reject_msg.target == "SELLSIDE"
     assert reject_msg.orig_sending_time == @t_plus_1
+
     assert :lists.keyfind("58", 1, reject_msg.body) ==
-      {"58", "Value is incorrect (out of range) for this tag"}
+             {"58", "Value is incorrect (out of range) for this tag"}
   end
 
   test "Initiate Logout (p. 58)", %{config: cfg} do
@@ -812,7 +1004,9 @@ defmodule ExFix.SessionTest do
     assert logout.target == "SELLSIDE"
   end
 
-  test "Receive valid Logout message in response to a solicited logout process (p. 58)", %{config: cfg} do
+  test "Receive valid Logout message in response to a solicited logout process (p. 58)", %{
+    config: cfg
+  } do
     ## Disconnect without sending a message
 
     {:ok, session} = Session.init(cfg)
@@ -850,17 +1044,34 @@ defmodule ExFix.SessionTest do
     assert logout.target == "SELLSIDE"
   end
 
-  test "Resend messages: replace administrative messages with Sequence Reset messages (1)", %{config: cfg} do
+  test "Resend messages: replace administrative messages with Sequence Reset messages (1)", %{
+    config: cfg
+  } do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
-    out_messages = [{1, %MessageToSend{seqnum: 1, msg_type: @msg_type_logon,
-      sender: "BUYSIDE", target: "SELLSIDE", orig_sending_time: @t0, body: []}}]
+    out_messages = [
+      {1,
+       %MessageToSend{
+         seqnum: 1,
+         msg_type: @msg_type_logon,
+         sender: "BUYSIDE",
+         target: "SELLSIDE",
+         orig_sending_time: @t0,
+         body: []
+       }}
+    ]
+
     session = Session.set_out_queue(session, out_messages)
 
     seq = 11
-    incoming_data = build_message(@msg_type_resend_request, seq, "SELLSIDE", "BUYSIDE", @t_plus_1,
-      [{@field_begin_seq_no, 1}, {@field_end_seq_no, 0}])
+
+    incoming_data =
+      build_message(@msg_type_resend_request, seq, "SELLSIDE", "BUYSIDE", @t_plus_1, [
+        {@field_begin_seq_no, 1},
+        {@field_end_seq_no, 0}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:resend, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -874,7 +1085,9 @@ defmodule ExFix.SessionTest do
     assert msg.seqnum == 1
   end
 
-  test "Resend messages: replace administrative messages with Sequence Reset messages (2)", %{config: cfg} do
+  test "Resend messages: replace administrative messages with Sequence Reset messages (2)", %{
+    config: cfg
+  } do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 8}
 
@@ -884,13 +1097,19 @@ defmodule ExFix.SessionTest do
       {5, %MessageToSend{seqnum: 5, msg_type: @msg_type_test_request}},
       {6, %MessageToSend{seqnum: 6, msg_type: @msg_type_sequence_reset}},
       {7, %MessageToSend{seqnum: 7, msg_type: @msg_type_resend_request}},
-      {8, %MessageToSend{seqnum: 8, msg_type: @msg_type_logout}},
+      {8, %MessageToSend{seqnum: 8, msg_type: @msg_type_logout}}
     ]
+
     session = Session.set_out_queue(session, out_messages)
 
     seq = 11
-    incoming_data = build_message(@msg_type_resend_request, seq, "SELLSIDE", "BUYSIDE", @t_plus_1,
-      [{@field_begin_seq_no, 3}, {@field_end_seq_no, 0}])
+
+    incoming_data =
+      build_message(@msg_type_resend_request, seq, "SELLSIDE", "BUYSIDE", @t_plus_1, [
+        {@field_begin_seq_no, 3},
+        {@field_end_seq_no, 0}
+      ])
+
     session = Session.set_time(session, @t_plus_1)
     {:resend, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
@@ -936,8 +1155,19 @@ defmodule ExFix.SessionTest do
     seq = 11
     resend = true
     orig_sending_time = @t0
-    incoming_data = build_message(@msg_type_execution_report, seq, "SELLSIDE", "BUYSIDE",
-      @t_plus_1, [{@field_account, "1234"}], orig_sending_time, resend)
+
+    incoming_data =
+      build_message(
+        @msg_type_execution_report,
+        seq,
+        "SELLSIDE",
+        "BUYSIDE",
+        @t_plus_1,
+        [{@field_account, "1234"}],
+        orig_sending_time,
+        resend
+      )
+
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
@@ -953,8 +1183,19 @@ defmodule ExFix.SessionTest do
     seq = 11
     resend = true
     orig_sending_time = @t_plus_1
-    incoming_data = build_message(@msg_type_execution_report, seq, "SELLSIDE", "BUYSIDE",
-      @t_plus_1, [{@field_account, "1234"}], orig_sending_time, resend)
+
+    incoming_data =
+      build_message(
+        @msg_type_execution_report,
+        seq,
+        "SELLSIDE",
+        "BUYSIDE",
+        @t_plus_1,
+        [{@field_account, "1234"}],
+        orig_sending_time,
+        resend
+      )
+
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online

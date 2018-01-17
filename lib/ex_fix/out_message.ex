@@ -6,14 +6,14 @@ defmodule ExFix.OutMessage do
   alias ExFix.OutMessage
 
   defstruct msg_type: nil,
-      fields: []
+            fields: []
 
   @type t :: %OutMessage{}
 
   @doc """
 
   """
-  @spec new(String.t) :: OutMessage.t
+  @spec new(String.t()) :: OutMessage.t()
   def new(msg_type) do
     %OutMessage{msg_type: msg_type}
   end
@@ -29,7 +29,7 @@ defmodule ExFix.OutMessage do
 
   """
   def set_fields(%OutMessage{} = msg, new_fields) do
-    Enum.reduce(new_fields, msg, fn({field, value}, %OutMessage{} = struct) ->
+    Enum.reduce(new_fields, msg, fn {field, value}, %OutMessage{} = struct ->
       set_field(struct, field, value)
     end)
   end

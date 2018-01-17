@@ -7,7 +7,7 @@ defmodule ExFix.Application do
 
     children = [
       worker(ExFix.DefaultSessionRegistry, []),
-      supervisor(ExFix.SessionSup, []),
+      supervisor(ExFix.SessionSup, [])
     ]
 
     opts = [strategy: :rest_for_one, name: ExFix.Supervisor]

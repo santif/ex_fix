@@ -6,16 +6,16 @@ defmodule ExFix.InMessage do
   alias ExFix.InMessage
 
   defstruct valid: false,
-      complete: false,
-      msg_type: nil,
-      subject: nil,
-      poss_dup: false,
-      fields: [],
-      seqnum: nil,
-      rest_msg: "",
-      other_msgs: "",
-      original_fix_msg: nil,
-      error_reason: nil
+            complete: false,
+            msg_type: nil,
+            subject: nil,
+            poss_dup: false,
+            fields: [],
+            seqnum: nil,
+            rest_msg: "",
+            other_msgs: "",
+            original_fix_msg: nil,
+            error_reason: nil
 
   @type t :: %InMessage{}
 
@@ -23,6 +23,7 @@ defmodule ExFix.InMessage do
     case :lists.keyfind(field, 1, fields) do
       {^field, value} ->
         value
+
       false ->
         nil
     end

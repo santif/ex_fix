@@ -76,36 +76,48 @@ defmodule ExFix do
   @doc """
   Starts FIX session initiator
   """
-  @spec start_session_initiator(String.t, String.t, String.t, SessionHandler, list()) :: :ok
-  def start_session_initiator(session_name, sender_comp_id, target_comp_id,
-      session_handler, opts \\ []) do
-    opts = Enum.into(opts, %{
-      hostname: "localhost",
-      port: 9876,
-      username: nil,
-      password: nil,
-      dictionary: @default_dictionary,
-      log_incoming_msg: true,
-      log_outgoing_msg: true,
-      default_applverid: "9",
-      logon_encrypt_method: "0",
-      heart_bt_int: 60,
-      max_output_buf_count: 1_000,
-      reconnect_interval: 15,
-      reset_on_logon: true,
-      validate_incoming_message: true,
-      transport_mod: :gen_tcp,
-      transport_options: [],
-      time_service: nil,
-      env: %{}
-    })
-    config = struct(%SessionConfig{
-      name: session_name,
-      mode: :initiator,
-      sender_comp_id: sender_comp_id,
-      target_comp_id: target_comp_id,
-      session_handler: session_handler
-    }, opts)
+  @spec start_session_initiator(String.t(), String.t(), String.t(), SessionHandler, list()) :: :ok
+  def start_session_initiator(
+        session_name,
+        sender_comp_id,
+        target_comp_id,
+        session_handler,
+        opts \\ []
+      ) do
+    opts =
+      Enum.into(opts, %{
+        hostname: "localhost",
+        port: 9876,
+        username: nil,
+        password: nil,
+        dictionary: @default_dictionary,
+        log_incoming_msg: true,
+        log_outgoing_msg: true,
+        default_applverid: "9",
+        logon_encrypt_method: "0",
+        heart_bt_int: 60,
+        max_output_buf_count: 1_000,
+        reconnect_interval: 15,
+        reset_on_logon: true,
+        validate_incoming_message: true,
+        transport_mod: :gen_tcp,
+        transport_options: [],
+        time_service: nil,
+        env: %{}
+      })
+
+    config =
+      struct(
+        %SessionConfig{
+          name: session_name,
+          mode: :initiator,
+          sender_comp_id: sender_comp_id,
+          target_comp_id: target_comp_id,
+          session_handler: session_handler
+        },
+        opts
+      )
+
     session_registry = opts[:session_registry] || @session_registry
     session_registry.start_session(session_name, config)
   end
@@ -113,7 +125,7 @@ defmodule ExFix do
   @doc """
   Send FIX message to a session
   """
-  @spec send_message!(OutMessage.t, Session.session_name) :: :ok | no_return
+  @spec send_message!(OutMessage.t(), Session.session_name()) :: :ok | no_return
   def send_message!(out_message, session_name) do
     SessionWorker.send_message!(session_name, out_message)
   end
@@ -121,7 +133,7 @@ defmodule ExFix do
   @doc """
   Stop FIX session
   """
-  @spec stop_session(Session.session_name, SessionRegistry | nil) :: :ok | no_return
+  @spec stop_session(Session.session_name(), SessionRegistry | nil) :: :ok | no_return
   def stop_session(session_name, registry \\ nil) do
     session_registry = registry || @session_registry
     session_registry.stop_session(session_name)

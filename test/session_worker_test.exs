@@ -12,18 +12,19 @@ defmodule ExFix.SessionWorkerTest do
   alias ExFix.TestHelper.TestTransport
   alias ExFix.TestHelper.TestSessionRegistry
 
-  @tag_account         "1"
-  @tag_cl_ord_id      "11"
-  @tag_order_qty      "38"
-  @tag_ord_type       "40"
-  @tag_price          "44"
-  @tag_side           "54"
-  @tag_symbol         "55"
-  @tag_time_in_force  "59"
-  @tag_transact_time  "60"
+  @tag_account "1"
+  @tag_cl_ord_id "11"
+  @tag_order_qty "38"
+  @tag_ord_type "40"
+  @tag_price "44"
+  @tag_side "54"
+  @tag_symbol "55"
+  @tag_time_in_force "59"
+  @tag_transact_time "60"
 
   setup do
     {:ok, _} = TestSessionRegistry.start_link()
+
     config = %SessionConfig{
       name: "sessiontest1",
       mode: :initiator,
@@ -49,6 +50,7 @@ defmodule ExFix.SessionWorkerTest do
       time_service: nil,
       env: %{}
     }
+
     %{config: config}
   end
 
@@ -62,11 +64,23 @@ defmodule ExFix.SessionWorkerTest do
     assert msg.valid
 
     now = DateTime.utc_now()
-    rec_logon = %MessageToSend{seqnum: 1, sender: "TARGET",
-      orig_sending_time: now, target: "SENDER",
-      msg_type: "A", body: [{"98", "0"}, {"108", 120},
-      {"141", true}, {"553", "usr1"}, {"554", "pwd1"},
-      {"1137", "9"}]}
+
+    rec_logon = %MessageToSend{
+      seqnum: 1,
+      sender: "TARGET",
+      orig_sending_time: now,
+      target: "SENDER",
+      msg_type: "A",
+      body: [
+        {"98", "0"},
+        {"108", 120},
+        {"141", true},
+        {"553", "usr1"},
+        {"554", "pwd1"},
+        {"1137", "9"}
+      ]
+    }
+
     received_logon_msg = Serializer.serialize(rec_logon, now)
 
     TestTransport.receive_data("sessiontest1", received_logon_msg)
@@ -75,6 +89,7 @@ defmodule ExFix.SessionWorkerTest do
 
     ## Send New Order Single
     now = DateTime.utc_now()
+
     "D"
     |> OutMessage.new()
     |> OutMessage.set_field(@tag_account, 1234)
@@ -93,6 +108,7 @@ defmodule ExFix.SessionWorkerTest do
 
     ## Receive Execution Report
     now = DateTime.utc_now()
+
     er_body = [
       {"1", 531},
       {"11", 99},
@@ -106,10 +122,22 @@ defmodule ExFix.SessionWorkerTest do
       {"54", 1},
       {"55", "ABC"},
       {"150", "F"},
-      {"151", 0},
+      {"151", 0}
     ]
-    received_logon_msg = Serializer.serialize(%MessageToSend{seqnum: 2, sender: "TARGET",
-      orig_sending_time: now, target: "SENDER", msg_type: "8", body: er_body}, now)
+
+    received_logon_msg =
+      Serializer.serialize(
+        %MessageToSend{
+          seqnum: 2,
+          sender: "TARGET",
+          orig_sending_time: now,
+          target: "SENDER",
+          msg_type: "8",
+          body: er_body
+        },
+        now
+      )
+
     TestTransport.receive_data("sessiontest1", received_logon_msg)
 
     assert TestSessionRegistry.get_session_status("sessiontest1") == :connected

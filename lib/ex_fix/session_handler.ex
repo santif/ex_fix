@@ -22,32 +22,30 @@ defmodule ExFix.SessionHandler do
   - env - Map sent to `ExFix.start_session_initiator()`.
   """
   @callback on_app_message(
-    session_name :: Session.session_name,
-    msg_type :: String.t,
-    msg :: InMessage.t,
-    env :: map()) :: none()
+              session_name :: Session.session_name(),
+              msg_type :: String.t(),
+              msg :: InMessage.t(),
+              env :: map()
+            ) :: none()
 
   @doc """
   FIX message received (session level). Same arguments of `on_message()`.
   """
   @callback on_session_message(
-    session_name :: Session.session_name,
-    msg_type :: String.t,
-    msg :: InMessage.t,
-    env :: map()) :: none()
+              session_name :: Session.session_name(),
+              msg_type :: String.t(),
+              msg :: InMessage.t(),
+              env :: map()
+            ) :: none()
 
   @doc """
   Called after a Logon message is received from counterparty
   """
-  @callback on_logon(
-    session_name :: Session.session_name,
-    env :: map()) :: none()
+  @callback on_logon(session_name :: Session.session_name(), env :: map()) :: none()
 
   @doc """
   Called after a Logout message is received from counterparty or after a
   disconnection, which occurs first.
   """
-  @callback on_logout(
-    session_name :: Session.session_name,
-    env :: map()) :: none()
+  @callback on_logout(session_name :: Session.session_name(), env :: map()) :: none()
 end

@@ -20,9 +20,10 @@ defmodule ExFix.SessionTimer do
     receive do
       _ ->
         timer_loop(name, interval_ms, process_pid)
-    after interval_ms ->
-      send(process_pid, {:timeout, name})
-      timer_loop(name, interval_ms, process_pid)
+    after
+      interval_ms ->
+        send(process_pid, {:timeout, name})
+        timer_loop(name, interval_ms, process_pid)
     end
   end
 end

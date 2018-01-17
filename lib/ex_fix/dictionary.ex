@@ -3,9 +3,9 @@ defmodule ExFix.Dictionary do
   FIX dictionary behaviour
   """
 
-  @type subject_field :: String.t | {String.t, String.t} | nil
+  @type subject_field :: String.t() | {String.t(), String.t()} | nil
 
   @doc """
   """
-  @callback subject(msg_type :: String.t) :: subject_field
+  @callback subject(msg_type :: String.t()) :: subject_field
 end
