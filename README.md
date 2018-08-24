@@ -7,8 +7,6 @@
 [![Ebert](https://ebertapp.io/github/santif/ex_fix.svg)](https://ebertapp.io/github/santif/ex_fix)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Warning:** This library is under active development and the API is subject to change.
-
 Elixir implementation of FIX Session Protocol FIXT.1.1.
 Currently only supports FIX session initiator (buy side).
 
