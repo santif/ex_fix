@@ -1,6 +1,5 @@
 # ExFIX
 
-[![Master](https://travis-ci.org/santif/ex_fix.svg?branch=master)](https://travis-ci.org/santif/ex_fix)
 [![Coverage Status](https://coveralls.io/repos/github/santif/ex_fix/badge.svg?branch=master)](https://coveralls.io/github/santif/ex_fix?branch=master)
 [![Tokei](https://tokei.rs/b1/github/santif/ex_fix?category=code)](https://tokei.rs/b1/github/santif/ex_fix?category=code)
 [![Hex.pm Version](http://img.shields.io/hexpm/v/ex_fix.svg?style=flat)](https://hex.pm/packages/ex_fix)
@@ -129,7 +128,7 @@ This is a work in progress. Here is a list of some pending tasks, PRs are welcom
 
 ## Benchmarks
 
-Elixir can't beat the performance of C/C++, but this library lets you avoid
+Elixir can't beat the performance of C/C++/Rust, but this library lets you avoid
 communication time between an external FIX initiator and the Erlang VM.
 In addition, there are fewer dependencies and number of possible failure points.
 
@@ -152,11 +151,11 @@ Parse - Full Msg                           500000   15.31 µs/op
 
 ## Maintainer
 
-Santiago Fernandez `<santif@gmail.com>`
+Santiago Fernandez `<santif@gmail.com>` (Author)
 
 ## License
 
-Copyright (c) 2019 Matriz S.A.
+Copyright (c) 2021 Matriz S.A.
 [http://www.matriz.com.ar](http://www.matriz.com.ar)
 
 Licensed under the Apache License, Version 2.0 (the "License");
