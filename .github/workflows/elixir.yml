@@ -1,0 +1,23 @@
+name: Elixir CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.14'
+        otp-version: '25'
+        install-hex: true
+        install-rebar: true
+    - name: Install Dependencies
+      run: mix deps.get
+    - name: Run Tests
+      run: mix test
