@@ -415,9 +415,51 @@ defmodule ExFix.Session do
 
     case {sender, target} do
       {{@field_sender_comp_id, ^target_comp_id}, {@field_target_comp_id, ^sender_comp_id}} ->
-        ## Valid message
-        session_handler.on_app_message(session_name, msg_type, msg, env)
-        {:ok, [], %Session{session | in_lastseq: expected_seqnum, extra_bytes: msg.other_msgs}}
+        sending_time_valid? =
+          case :lists.keyfind(@field_sending_time, 1, fields) do
+            {@field_sending_time, value} ->
+              with {:ok, sending_dt} <- ExFix.DateUtil.parse_date(value),
+                   now <- current_time(config),
+                   diff <- abs(DateTime.diff(now, sending_dt, :second)),
+                   true <- diff <= 120 do
+                true
+              else
+                _ -> false
+              end
+
+            _ ->
+              false
+          end
+
+        if sending_time_valid? do
+          session_handler.on_app_message(session_name, msg_type, msg, env)
+          {:ok, [], %Session{session | in_lastseq: expected_seqnum, extra_bytes: msg.other_msgs}}
+        else
+          session_handler.on_logout(session_name, env)
+          out_lastseq = out_lastseq + 1
+
+          reject_msg =
+            build_message(config, @msg_type_reject, out_lastseq, [
+              {@field_session_reject_reason, "10"},
+              {@field_text, "SendingTime acccuracy problem"}
+            ])
+
+          out_lastseq = out_lastseq + 1
+
+          logout_msg =
+            build_message(config, @msg_type_logout, out_lastseq, [
+              {@field_text, "SendingTime accuracy problem"}
+            ])
+
+          {:logout, [reject_msg, logout_msg],
+           %Session{
+             session
+             | status: :disconnecting,
+               out_lastseq: out_lastseq,
+               extra_bytes: msg.other_msgs,
+               in_lastseq: expected_seqnum
+           }}
+        end
 
       _ ->
         invalid_field =
@@ -689,6 +731,14 @@ defmodule ExFix.Session do
       target: target,
       body: body
     }
+  end
+
+  defp current_time(%SessionConfig{time_service: time_service}) do
+    case time_service do
+      nil -> DateTime.utc_now()
+      {m, f, a} -> :erlang.apply(m, f, a)
+      %DateTime{} = v -> v
+    end
   end
 
   defp add_to_in_queue(

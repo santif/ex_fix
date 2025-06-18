@@ -42,6 +42,42 @@ defmodule ExFix.DateUtil do
     <<yyyy::binary(), mm::binary(), dd::binary(), "-", time::binary()>>
   end
 
+  @doc """
+  Parse FIX UTC timestamp ("YYYYMMDD-HH:MM:SS.sss")
+  """
+  @spec parse_date(binary()) :: {:ok, DateTime.t()} | {:error, term()}
+  def parse_date(
+        <<
+          year::binary-size(4),
+          month::binary-size(2),
+          day::binary-size(2),
+          "-",
+          hour::binary-size(2),
+          ":",
+          minute::binary-size(2),
+          ":",
+          second::binary-size(2),
+          ".",
+          millis::binary-size(3)
+        >>
+      ) do
+    with {year, ""} <- Integer.parse(year),
+         {month, ""} <- Integer.parse(month),
+         {day, ""} <- Integer.parse(day),
+         {hour, ""} <- Integer.parse(hour),
+         {minute, ""} <- Integer.parse(minute),
+         {second, ""} <- Integer.parse(second),
+         {millis, ""} <- Integer.parse(millis),
+         {:ok, naive} <-
+           NaiveDateTime.new(year, month, day, hour, minute, second, {millis * 1000, 3}) do
+      DateTime.from_naive(naive, "Etc/UTC")
+    else
+      _ -> {:error, :invalid}
+    end
+  end
+
+  def parse_date(_), do: {:error, :invalid}
+
   ##
   ## Private functions
   ##
