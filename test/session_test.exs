@@ -32,6 +32,8 @@ defmodule ExFix.SessionTest do
   @t_plus_1 Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 3}}, "Etc/UTC")
   @t_plus_2 Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 4}}, "Etc/UTC")
   @t_plus_4min Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 5, 3}}, "Etc/UTC")
+  @t_oct Calendar.DateTime.from_erl!({{2016, 10, 7}, {16, 28, 50}}, "Etc/UTC")
+  @t_jul Calendar.DateTime.from_erl!({{2017, 7, 17}, {17, 50, 56}}, "Etc/UTC")
 
   setup do
     config = %SessionConfig{
@@ -115,6 +117,7 @@ defmodule ExFix.SessionTest do
   test "Execution Report - fragmented", %{config: cfg} do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    session = Session.set_time(session, @t_oct)
     assert byte_size(Session.get_extra_bytes(session)) == 0
 
     seq = 11
@@ -149,6 +152,7 @@ defmodule ExFix.SessionTest do
   test "Receiving multiple messages in a single segment", %{config: cfg} do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    session = Session.set_time(session, @t_oct)
     assert byte_size(Session.get_extra_bytes(session)) == 0
 
     seq = 11
@@ -189,6 +193,7 @@ defmodule ExFix.SessionTest do
   test "Receiving 1.5 messages in a segment", %{config: cfg} do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    session = Session.set_time(session, @t_oct)
     assert byte_size(Session.get_extra_bytes(session)) == 0
 
     seq = 11
@@ -399,7 +404,7 @@ defmodule ExFix.SessionTest do
     assert reject_msg.msg_type == @msg_type_reject
     assert reject_msg.sender == "BUYSIDE"
     assert reject_msg.target == "SELLSIDE"
-    assert reject_msg.orig_sending_time == @t_plus_1
+    assert reject_msg.orig_sending_time == @t_jul
     assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "10"}
     assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "SendingTime acccuracy problem"}
   end
@@ -469,7 +474,7 @@ defmodule ExFix.SessionTest do
     assert logout.msg_type == @msg_type_logout
     assert logout.sender == "BUYSIDE"
     assert logout.target == "SELLSIDE"
-    assert logout.orig_sending_time == @t_plus_1
+    assert logout.orig_sending_time == @t_jul
     assert :lists.keyfind("58", 1, logout.body) == {"58", "Incorrect BeginString value"}
   end
 
@@ -565,6 +570,7 @@ defmodule ExFix.SessionTest do
 
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    session = Session.set_time(session, @t_jul)
 
     msg_seqnum = 11
     incorrect_body_length = 5
@@ -628,6 +634,7 @@ defmodule ExFix.SessionTest do
 
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    session = Session.set_time(session, @t_jul)
 
     msg_seqnum = 11
 
