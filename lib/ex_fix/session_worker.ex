@@ -39,6 +39,16 @@ defmodule ExFix.SessionWorker do
     GenServer.start_link(__MODULE__, [config, registry], name: name)
   end
 
+  @impl true
+  def child_spec([config, registry] = args) do
+    %{
+      id: {:session, config.name},
+      start: {__MODULE__, :start_link, args},
+      restart: :transient,
+      type: :worker
+    }
+  end
+
   def send_message!(fix_session, out_message) when is_binary(fix_session) do
     # name = {:via, ExFix.Registry, {:ex_fix_session, fix_session}}
     name = :"ex_fix_session_#{fix_session}"
