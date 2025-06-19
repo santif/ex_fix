@@ -39,8 +39,7 @@ defmodule ExFix.SessionWorker do
     GenServer.start_link(__MODULE__, [config, registry], name: name)
   end
 
-  @impl true
-  def child_spec([config, registry] = args) do
+  def child_spec([config, _registry] = args) do
     %{
       id: {:session, config.name},
       start: {__MODULE__, :start_link, args},
@@ -65,6 +64,7 @@ defmodule ExFix.SessionWorker do
   ## GenServer callbacks
   ##
 
+  @impl true
   def init([config, session_registry]) do
     action = session_registry.session_on_init(config.name)
     send(self(), {:init, action, config})
@@ -78,20 +78,24 @@ defmodule ExFix.SessionWorker do
      }}
   end
 
+  @impl true
   def handle_info({:timeout, timer_name}, %State{session: session} = state) do
     {:ok, msgs_to_send, session} = Session.handle_timeout(session, timer_name)
     do_send_messages(msgs_to_send, state)
     {:noreply, %State{state | session: session}}
   end
 
+  @impl true
   def handle_info({:ssl, _socket, data}, %State{} = state) do
     handle_data(data, state)
   end
 
+  @impl true
   def handle_info({:tcp, _socket, data}, %State{} = state) do
     handle_data(data, state)
   end
 
+  @impl true
   def handle_info({:init, action, config}, state) do
     case action do
       :ok ->
@@ -107,20 +111,24 @@ defmodule ExFix.SessionWorker do
     end
   end
 
+  @impl true
   def handle_info({:ssl_closed, _socket}, state) do
     {:stop, :closed, state}
   end
 
+  @impl true
   def handle_info({:tcp_closed, _socket}, state) do
     {:stop, :closed, state}
   end
 
+  @impl true
   def handle_call({:send_message, %OutMessage{} = msg}, _from, %State{session: session} = state) do
     {:ok, msgs_to_send, session} = Session.send_message(session, msg)
     do_send_messages(msgs_to_send, state)
     {:reply, :ok, %State{state | session: session}}
   end
 
+  @impl true
   def handle_call(
         :stop,
         _from,
@@ -141,6 +149,7 @@ defmodule ExFix.SessionWorker do
     {:stop, :normal, :ok, state}
   end
 
+  @impl true
   def terminate(
         :econnrefused,
         %State{name: fix_session_name, session_registry: session_registry} = _state
@@ -149,6 +158,7 @@ defmodule ExFix.SessionWorker do
     :ok
   end
 
+  @impl true
   def terminate(
         :closed,
         %State{name: fix_session_name, session_registry: session_registry} = _state
@@ -157,6 +167,7 @@ defmodule ExFix.SessionWorker do
     :ok
   end
 
+  @impl true
   def terminate(
         :normal,
         %State{name: fix_session_name, session_registry: session_registry} = _state
@@ -165,6 +176,7 @@ defmodule ExFix.SessionWorker do
     :ok
   end
 
+  @impl true
   def terminate(_reason, _state) do
     :ok
   end
