@@ -57,9 +57,9 @@ defmodule ExFix.Serializer do
     {:ok, body, bin_len, cs_total} =
       fields_to_bin([{@tag_msg_type, msg_type}, {@tag_seqnum, seqnum} | fields])
 
-    head = <<"8=FIXT.1.1", 1, "9=", bin_len::binary(), 1>>
+    head = <<"8=FIXT.1.1", 1, "9=", bin_len::binary, 1>>
     checksum_bin = calculate_checksum(cs_total, head)
-    <<head::binary(), body::binary(), "10=", checksum_bin::binary(), 1>>
+    <<head::binary, body::binary, "10=", checksum_bin::binary, 1>>
   end
 
   ##
@@ -79,7 +79,7 @@ defmodule ExFix.Serializer do
 
   defp fields_to_bin([{tag, value} | rest], bin, len, cstot) do
     bin_value = serialize_value(value)
-    pair = <<tag::binary(), "=", bin_value::binary(), 1>>
+    pair = <<tag::binary, "=", bin_value::binary, 1>>
     fields_to_bin(rest, [pair | bin], len + byte_size(pair), bin_sum(pair, cstot))
   end
 
@@ -103,7 +103,7 @@ defmodule ExFix.Serializer do
 
   def bin_sum(<<>>, acc), do: acc
 
-  def bin_sum(<<value::binary-size(1), rest::binary()>>, acc) do
+  def bin_sum(<<value::binary-size(1), rest::binary>>, acc) do
     bin_sum(rest, acc + :binary.decode_unsigned(value))
   end
 

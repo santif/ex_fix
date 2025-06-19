@@ -70,8 +70,8 @@ defmodule ExFix do
   alias ExFix.OutMessage
   alias ExFix.SessionHandler
 
-  @default_dictionary Application.get_env(:ex_fix, :default_dictionary, ExFix.DefaultDictionary)
-  @session_registry Application.get_env(:ex_fix, :session_registry, ExFix.DefaultSessionRegistry)
+  @default_dictionary Application.compile_env(:ex_fix, :default_dictionary, ExFix.DefaultDictionary)
+  @session_registry Application.compile_env(:ex_fix, :session_registry, ExFix.DefaultSessionRegistry)
 
   @doc """
   Starts FIX session initiator

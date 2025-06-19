@@ -8,9 +8,9 @@ defmodule ExFix.SessionSup do
 
   def init(_args) do
     children = [
-      worker(ExFix.SessionWorker, [], restart: :transient)
+      {ExFix.SessionWorker, [], restart: :transient}
     ]
 
-    supervise(children, strategy: :simple_one_for_one)
+    Supervisor.init(children, strategy: :simple_one_for_one)
   end
 end

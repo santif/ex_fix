@@ -180,7 +180,7 @@ defmodule ExFix.TestHelper do
       case String.contains?(result, "9=$$$") do
         true ->
           size_val = "#{byte_size(result) - byte_size("8=FIXT.1.1|9=$$$|10=$$$|")}"
-          :binary.replace(result, <<1, "9=$$$", 1>>, <<1, "9=", size_val::binary(), 1>>)
+          :binary.replace(result, <<1, "9=$$$", 1>>, <<1, "9=", size_val::binary, 1>>)
 
         false ->
           result
@@ -190,7 +190,7 @@ defmodule ExFix.TestHelper do
       case String.contains?(result2, "10=$$$") do
         true ->
           cs_val = checksum(result2)
-          :binary.replace(result2, <<1, "10=$$$", 1>>, <<1, "10=", cs_val::binary(), 1>>)
+          :binary.replace(result2, <<1, "10=$$$", 1>>, <<1, "10=", cs_val::binary, 1>>)
 
         false ->
           result2
@@ -219,7 +219,7 @@ defmodule ExFix.TestHelper do
     String.pad_leading("#{rem(acc, 256)}", 3, "0")
   end
 
-  defp cs(<<value::binary-size(1), rest::binary()>>, acc) do
+  defp cs(<<value::binary-size(1), rest::binary>>, acc) do
     cs(rest, acc + :binary.decode_unsigned(value))
   end
 end

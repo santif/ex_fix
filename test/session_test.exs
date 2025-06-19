@@ -130,7 +130,7 @@ defmodule ExFix.SessionTest do
           "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|"
       )
 
-    <<seg1::binary-size(100), seg2::binary-size(100), seg3::binary()>> = incoming_data
+    <<seg1::binary-size(100), seg2::binary-size(100), seg3::binary>> = incoming_data
 
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, seg1)
     assert msgs_to_send == []
@@ -175,7 +175,7 @@ defmodule ExFix.SessionTest do
           "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|"
       )
 
-    incoming_data = <<incoming_data1::binary(), incoming_data2::binary()>>
+    incoming_data = <<incoming_data1::binary, incoming_data2::binary>>
 
     {:continue, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
     assert msgs_to_send == []
@@ -216,8 +216,8 @@ defmodule ExFix.SessionTest do
           "60=20161007-16:28:50.796|150=F|151=0|207=MARKET|453=1|448=|447=D|452=11|10=$$$|"
       )
 
-    <<seg1::binary-size(100), incoming_data2::binary()>> = msg2
-    incoming_data1 = <<msg1::binary(), seg1::binary()>>
+    <<seg1::binary-size(100), incoming_data2::binary>> = msg2
+    incoming_data1 = <<msg1::binary, seg1::binary>>
 
     {:continue, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data1)
     assert msgs_to_send == []

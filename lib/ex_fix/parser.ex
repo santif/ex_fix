@@ -25,15 +25,15 @@ defmodule ExFix.Parser do
   """
   def parse1(data, dictionary, expected_seqnum \\ nil, validate \\ true)
 
-  def parse1(<<"8=FIXT.1.1", @soh, "9=", rest::binary()>>, dictionary, expected_seqnum, validate) do
+  def parse1(<<"8=FIXT.1.1", @soh, "9=", rest::binary>>, dictionary, expected_seqnum, validate) do
     [str_len, rest1] = :binary.split(rest, <<@soh>>)
     {len, _} = Integer.parse(str_len)
 
     case rest1 do
-      <<body::binary-size(len), "10=", checksum::binary-size(3), @soh, other_msgs::binary()>> ->
+      <<body::binary-size(len), "10=", checksum::binary-size(3), @soh, other_msgs::binary>> ->
         orig_msg =
-          <<"8=FIXT.1.1", @soh, "9=", str_len::binary(), @soh, body::binary(), "10=",
-            checksum::binary(), @soh>>
+          <<"8=FIXT.1.1", @soh, "9=", str_len::binary, @soh, body::binary, "10=",
+            checksum::binary, @soh>>
 
         case validate_msg(validate, str_len, body, checksum) do
           true ->
@@ -51,7 +51,7 @@ defmodule ExFix.Parser do
         end
 
       _ ->
-        orig_msg = <<"8=FIXT.1.1", @soh, "9=", rest::binary()>>
+        orig_msg = <<"8=FIXT.1.1", @soh, "9=", rest::binary>>
 
         %InMessage{
           valid: false,
@@ -64,7 +64,7 @@ defmodule ExFix.Parser do
     end
   end
 
-  def parse1(<<"8=", _rest::binary()>> = orig_msg, _dictionary, _expected_seqnum, _validate) do
+  def parse1(<<"8=", _rest::binary>> = orig_msg, _dictionary, _expected_seqnum, _validate) do
     %InMessage{
       valid: false,
       msg_type: nil,
@@ -116,8 +116,8 @@ defmodule ExFix.Parser do
   ## Parse when checksum is valid
   defp parse_message(rest1, expected_seqnum, orig_msg, dictionary, other_msgs) do
     case :binary.split(rest1, <<@soh>>) do
-      [<<"35=", msg_type::binary()>>, rest2] ->
-        [<<"34=", str_seqnum::binary()>>, msg] = :binary.split(rest2, <<@soh>>)
+      [<<"35=", msg_type::binary>>, rest2] ->
+        [<<"34=", str_seqnum::binary>>, msg] = :binary.split(rest2, <<@soh>>)
         {msg_seqnum, _} = Integer.parse(str_seqnum)
 
         case msg_seqnum == expected_seqnum or expected_seqnum == nil do
@@ -154,16 +154,16 @@ defmodule ExFix.Parser do
     end
   end
 
-  defp do_parse(<<"10=", _cs::binary()>>, _subject_field, acc) do
+  defp do_parse(<<"10=", _cs::binary>>, _subject_field, acc) do
     {:ok, nil, :lists.reverse(acc), ""}
   end
 
-  defp do_parse(<<"95=", rest::binary()>>, subject_field, acc) do
+  defp do_parse(<<"95=", rest::binary>>, subject_field, acc) do
     [str_len, rest1] = :binary.split(rest, <<@soh>>)
     {len, _} = Integer.parse(str_len)
 
     case rest1 do
-      <<"96=", rawdata::binary-size(len), @soh, other_fields::binary()>> ->
+      <<"96=", rawdata::binary-size(len), @soh, other_fields::binary>> ->
         do_parse(other_fields, subject_field, [{"96", {:binary, rawdata}} | acc])
 
       _ ->
@@ -316,11 +316,11 @@ defmodule ExFix.Parser do
 
   defp validate_msg(true, str_len, body, checksum) do
     received_checksum = String.to_integer(checksum)
-    payload = <<"8=FIXT.1.1", @soh, "9=", str_len::binary(), @soh, body::binary()>>
+    payload = <<"8=FIXT.1.1", @soh, "9=", str_len::binary, @soh, body::binary>>
     received_checksum == calc_checksum(payload, 0)
   end
 
-  defp calc_checksum(<<w::little-unsigned-integer-size(8), r::bytes()>>, acc) do
+  defp calc_checksum(<<w::little-unsigned-integer-size(8), r::bytes>>, acc) do
     calc_checksum(r, acc + w)
   end
 

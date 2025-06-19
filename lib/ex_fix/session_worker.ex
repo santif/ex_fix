@@ -13,8 +13,8 @@ defmodule ExFix.SessionWorker do
 
   @compile {:inline, handle_data: 2}
 
-  @rx_heartbeat_tolerance Application.get_env(:ex_fix, :rx_heartbeat_tolerance, 1.2)
-  @logout_timeout Application.get_env(:ex_fix, :logout_timeout, 2_000)
+  @rx_heartbeat_tolerance Application.compile_env(:ex_fix, :rx_heartbeat_tolerance, 1.2)
+  @logout_timeout Application.compile_env(:ex_fix, :logout_timeout, 2_000)
 
   defmodule State do
     @moduledoc false
