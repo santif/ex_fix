@@ -7,6 +7,7 @@ defmodule ExFix.DefaultSessionRegistry do
   use GenServer
   require Logger
   alias ExFix.SessionWorker
+  alias DynamicSupervisor
 
   @ets_table :ex_fix_registry
 
@@ -19,8 +20,8 @@ defmodule ExFix.DefaultSessionRegistry do
   ## API
   ##
 
-  def start_link do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  def start_link(args \\ []) do
+    GenServer.start_link(__MODULE__, args, name: __MODULE__)
   end
 
   def get_session_status(session_name) do
@@ -32,7 +33,8 @@ defmodule ExFix.DefaultSessionRegistry do
 
   def start_session(fix_session_name, config) do
     :ets.insert(@ets_table, {fix_session_name, :connecting})
-    {:ok, _} = Supervisor.start_child(ExFix.SessionSup, [config, __MODULE__])
+    child_spec = {ExFix.SessionWorker, [config, __MODULE__]}
+    {:ok, _} = DynamicSupervisor.start_child(ExFix.SessionSup, child_spec)
     :ok
   end
 

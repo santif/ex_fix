@@ -9,7 +9,7 @@ defmodule ExFix.ExFixTest do
   alias ExFix.TestHelper.FixEmptySessionHandler
   alias ExFix.TestHelper.TestTransport
 
-  @session_registry Application.get_env(:ex_fix, :session_registry, ExFix.DefaultSessionRegistry)
+  @session_registry Application.compile_env(:ex_fix, :session_registry, ExFix.DefaultSessionRegistry)
 
   @tag_account "1"
   @tag_cl_ord_id "11"
