@@ -2,7 +2,7 @@ defmodule ExFix.DateUtil do
   @moduledoc """
   FIX DateTime related functions
   """
-  alias Calendar.DateTime.Format
+
 
   @compile {:inline, pad2: 1, pad3: 1}
 
@@ -32,14 +32,12 @@ defmodule ExFix.DateUtil do
   end
 
   def serialize_date(%DateTime{} = date_time) do
-    <<yyyy::binary-size(4), "-", mm::binary-size(2), "-", dd::binary-size(2), "T",
-      time::binary-size(12),
-      _rest::binary>> =
+    utc =
       date_time
-      |> Calendar.DateTime.shift_zone!("Etc/UTC")
-      |> Format.rfc3339(3)
+      |> DateTime.to_unix(:microsecond)
+      |> DateTime.from_unix!(:microsecond)
 
-    <<yyyy::binary, mm::binary, dd::binary, "-", time::binary>>
+    serialize_date(utc)
   end
 
   @doc """

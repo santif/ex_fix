@@ -28,12 +28,12 @@ defmodule ExFix.SessionTest do
   @field_new_seq_no "36"
   @field_gap_fill "123"
 
-  @t0 Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 2}}, "Etc/UTC")
-  @t_plus_1 Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 3}}, "Etc/UTC")
-  @t_plus_2 Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 4}}, "Etc/UTC")
-  @t_plus_4min Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 5, 3}}, "Etc/UTC")
-  @t_oct Calendar.DateTime.from_erl!({{2016, 10, 7}, {16, 28, 50}}, "Etc/UTC")
-  @t_jul Calendar.DateTime.from_erl!({{2017, 7, 17}, {17, 50, 56}}, "Etc/UTC")
+  @t0 DateTime.from_naive!(~N[2017-06-05 14:01:02], "Etc/UTC")
+  @t_plus_1 DateTime.from_naive!(~N[2017-06-05 14:01:03], "Etc/UTC")
+  @t_plus_2 DateTime.from_naive!(~N[2017-06-05 14:01:04], "Etc/UTC")
+  @t_plus_4min DateTime.from_naive!(~N[2017-06-05 14:05:03], "Etc/UTC")
+  @t_oct DateTime.from_naive!(~N[2016-10-07 16:28:50], "Etc/UTC")
+  @t_jul DateTime.from_naive!(~N[2017-07-17 17:50:56], "Etc/UTC")
 
   setup do
     config = %SessionConfig{
