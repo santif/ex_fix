@@ -29,6 +29,10 @@ defmodule ExFix.SessionWorker do
               tx_timer: nil
   end
 
+  def start_link([config, registry]) do
+    start_link(config, registry)
+  end
+
   def start_link(config, registry) do
     # name = {:via, ExFix.Registry, {:ex_fix_session, config.name}}
     name = :"ex_fix_session_#{config.name}"

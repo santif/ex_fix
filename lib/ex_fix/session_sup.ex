@@ -1,16 +1,12 @@
 defmodule ExFix.SessionSup do
   @moduledoc false
-  use Supervisor
+  use DynamicSupervisor
 
-  def start_link do
-    Supervisor.start_link(__MODULE__, [], name: ExFix.SessionSup)
+  def start_link(args \\ []) do
+    DynamicSupervisor.start_link(__MODULE__, args, name: ExFix.SessionSup)
   end
 
   def init(_args) do
-    children = [
-      {ExFix.SessionWorker, [], restart: :transient}
-    ]
-
-    Supervisor.init(children, strategy: :simple_one_for_one)
+    DynamicSupervisor.init(strategy: :one_for_one)
   end
 end

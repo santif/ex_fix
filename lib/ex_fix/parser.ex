@@ -277,6 +277,7 @@ defmodule ExFix.Parser do
           msg_type: msg_type,
           seqnum: seqnum,
           subject: sub,
+          poss_dup: poss_dup,
           fields: fields,
           rest_msg: rest0,
           other_msgs: other_msgs,

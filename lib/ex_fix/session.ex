@@ -342,7 +342,7 @@ defmodule ExFix.Session do
 
     if not gap_fill and new_seq_no == seqnum and expected_seqnum == new_seq_no do
       Logger.warning(fn ->
-        %Session{config: %SessionConfig{name: session_name}} = session
+        %Session{config: %SessionConfig{name: ^session_name}} = session
 
         "[fix.warning] [#{session_name}] " <>
           "SeqReset GapFill with new_seq_no == seqnum == expected_seqnum: " <>
@@ -468,7 +468,7 @@ defmodule ExFix.Session do
 
         case orig_sending_time <= sending_time do
           true ->
-            %SessionConfig{name: session_name, session_handler: session_handler, env: env} =
+            %SessionConfig{name: ^session_name, session_handler: session_handler, env: env} =
               config
 
             session_handler.on_app_message(session_name, msg_type, msg, env)
@@ -604,7 +604,7 @@ defmodule ExFix.Session do
       ) do
     if @warning_on_garbled_messages do
       Logger.warning(fn ->
-        %Session{config: %SessionConfig{name: session_name}} = session
+        %Session{config: %SessionConfig{name: ^session_name}} = session
 
         "[fix.warning] [#{session_name}] Garbled: " <>
           :unicode.characters_to_binary(msg.original_fix_msg, :latin1, :utf8)
@@ -719,7 +719,7 @@ defmodule ExFix.Session do
     |> binary_part(0, len)
   end
 
-  defp validate_sending_time(session_name, %Session{config: config, out_lastseq: out_lastseq} = session, %InMessage{fields: fields, other_msgs: other} = msg, expected_seqnum) do
+  defp validate_sending_time(session_name, %Session{config: config, out_lastseq: out_lastseq} = session, %InMessage{fields: fields, other_msgs: other}, expected_seqnum) do
     %SessionConfig{time_service: time_service, session_handler: handler, env: env} = config
 
     now =
