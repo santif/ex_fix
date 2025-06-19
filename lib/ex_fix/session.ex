@@ -604,7 +604,7 @@ defmodule ExFix.Session do
       ) do
     if @warning_on_garbled_messages do
       Logger.warning(fn ->
-        %Session{config: %SessionConfig{name: ^session_name}} = session
+        %Session{config: %SessionConfig{name: session_name}} = session
 
         "[fix.warning] [#{session_name}] Garbled: " <>
           :unicode.characters_to_binary(msg.original_fix_msg, :latin1, :utf8)
