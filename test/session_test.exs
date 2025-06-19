@@ -31,6 +31,9 @@ defmodule ExFix.SessionTest do
   @t0 Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 2}}, "Etc/UTC")
   @t_plus_1 Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 3}}, "Etc/UTC")
   @t_plus_2 Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 1, 4}}, "Etc/UTC")
+  @t_plus_4min Calendar.DateTime.from_erl!({{2017, 6, 5}, {14, 5, 3}}, "Etc/UTC")
+  @t_oct Calendar.DateTime.from_erl!({{2016, 10, 7}, {16, 28, 50}}, "Etc/UTC")
+  @t_jul Calendar.DateTime.from_erl!({{2017, 7, 17}, {17, 50, 56}}, "Etc/UTC")
 
   setup do
     config = %SessionConfig{
@@ -114,6 +117,7 @@ defmodule ExFix.SessionTest do
   test "Execution Report - fragmented", %{config: cfg} do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    session = Session.set_time(session, @t_oct)
     assert byte_size(Session.get_extra_bytes(session)) == 0
 
     seq = 11
@@ -148,6 +152,7 @@ defmodule ExFix.SessionTest do
   test "Receiving multiple messages in a single segment", %{config: cfg} do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    session = Session.set_time(session, @t_oct)
     assert byte_size(Session.get_extra_bytes(session)) == 0
 
     seq = 11
@@ -188,6 +193,7 @@ defmodule ExFix.SessionTest do
   test "Receiving 1.5 messages in a segment", %{config: cfg} do
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    session = Session.set_time(session, @t_oct)
     assert byte_size(Session.get_extra_bytes(session)) == 0
 
     seq = 11
@@ -419,7 +425,7 @@ defmodule ExFix.SessionTest do
           "43=#{poss_dup_flag}|52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|"
       )
 
-    session = Session.set_time(session, @t_plus_1)
+    session = Session.set_time(session, @t_jul)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
@@ -432,7 +438,7 @@ defmodule ExFix.SessionTest do
     assert reject_msg.msg_type == @msg_type_reject
     assert reject_msg.sender == "BUYSIDE"
     assert reject_msg.target == "SELLSIDE"
-    assert reject_msg.orig_sending_time == @t_plus_1
+    assert reject_msg.orig_sending_time == @t_jul
     assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "1"}
 
     assert :lists.keyfind("58", 1, reject_msg.body) ==
@@ -456,7 +462,7 @@ defmodule ExFix.SessionTest do
           "52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|"
       )
 
-    session = Session.set_time(session, @t_plus_1)
+    session = Session.set_time(session, @t_jul)
     {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :disconnecting
@@ -468,7 +474,7 @@ defmodule ExFix.SessionTest do
     assert logout.msg_type == @msg_type_logout
     assert logout.sender == "BUYSIDE"
     assert logout.target == "SELLSIDE"
-    assert logout.orig_sending_time == @t_plus_1
+    assert logout.orig_sending_time == @t_jul
     assert :lists.keyfind("58", 1, logout.body) == {"58", "Incorrect BeginString value"}
   end
 
@@ -564,6 +570,7 @@ defmodule ExFix.SessionTest do
 
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    session = Session.set_time(session, @t_jul)
 
     msg_seqnum = 11
     incorrect_body_length = 5
@@ -581,6 +588,45 @@ defmodule ExFix.SessionTest do
     assert length(msgs_to_send) == 0
   end
 
+  test "SendingTime accuracy problem (p. 53)", %{config: cfg} do
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    seq = 11
+    incoming_data =
+      build_message(
+        @msg_type_execution_report,
+        seq,
+        "SELLSIDE",
+        "BUYSIDE",
+        @t_plus_4min,
+        [{@field_account, "1234"}]
+      )
+
+    session = Session.set_time(session, @t_plus_1)
+    {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :disconnecting
+    assert Session.get_in_lastseq(session) == 11
+    assert length(msgs_to_send) == 2
+    [reject_msg, logout_msg] = msgs_to_send
+
+    assert reject_msg.seqnum == 6
+    assert reject_msg.msg_type == @msg_type_reject
+    assert reject_msg.sender == "BUYSIDE"
+    assert reject_msg.target == "SELLSIDE"
+    assert reject_msg.orig_sending_time == @t_plus_1
+    assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "10"}
+    assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "SendingTime acccuracy problem"}
+
+    assert logout_msg.seqnum == 7
+    assert logout_msg.msg_type == @msg_type_logout
+    assert logout_msg.sender == "BUYSIDE"
+    assert logout_msg.target == "SELLSIDE"
+    assert logout_msg.orig_sending_time == @t_plus_1
+    assert :lists.keyfind("58", 1, logout_msg.body) == {"58", "Incorrect SendingTime value"}
+  end
+
   test "Checksum error (p. 55)", %{config: cfg} do
     # > CheckSum error is not the last field of message, value doesn't have length of 3, or isn't delimited by SOH
     # Ignore message - don't increment expected MsgSeqNum
@@ -588,6 +634,7 @@ defmodule ExFix.SessionTest do
 
     {:ok, session} = Session.init(cfg)
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+    session = Session.set_time(session, @t_jul)
 
     msg_seqnum = 11
 

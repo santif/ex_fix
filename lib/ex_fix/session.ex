@@ -10,6 +10,7 @@ defmodule ExFix.Session do
   alias ExFix.InMessage
   alias ExFix.OutMessage
   alias ExFix.Session.MessageToSend
+  alias ExFix.DateUtil
 
   @compile {:inline, process_valid_message: 4}
 
@@ -555,7 +556,13 @@ defmodule ExFix.Session do
         session,
         %InMessage{msg_type: msg_type, other_msgs: ""} = msg
       ) do
-    process_incoming_message(expected_seqnum, msg_type, session_name, session, msg)
+    case validate_sending_time(session_name, session, msg, expected_seqnum) do
+      :ok ->
+        process_incoming_message(expected_seqnum, msg_type, session_name, session, msg)
+
+      other ->
+        other
+    end
   end
 
   def process_valid_message(
@@ -564,20 +571,26 @@ defmodule ExFix.Session do
         session,
         %InMessage{msg_type: msg_type} = msg
       ) do
-    {result, msgs_to_send, session} =
-      process_incoming_message(expected_seqnum, msg_type, session_name, session, msg)
+    case validate_sending_time(session_name, session, msg, expected_seqnum) do
+      :ok ->
+        {result, msgs_to_send, session} =
+          process_incoming_message(expected_seqnum, msg_type, session_name, session, msg)
 
-    result2 =
-      case result do
-        # other_msgs is not empty; continue with next message
-        :ok ->
-          :continue
+        result2 =
+          case result do
+            # other_msgs is not empty; continue with next message
+            :ok ->
+              :continue
 
-        v ->
-          v
-      end
+            v ->
+              v
+          end
 
-    {result2, msgs_to_send, session}
+        {result2, msgs_to_send, session}
+
+      other ->
+        other
+    end
   end
 
   @doc """
@@ -704,6 +717,55 @@ defmodule ExFix.Session do
     |> :crypto.strong_rand_bytes()
     |> Base.encode64()
     |> binary_part(0, len)
+  end
+
+  defp validate_sending_time(session_name, %Session{config: config, out_lastseq: out_lastseq} = session, %InMessage{fields: fields, other_msgs: other} = msg, expected_seqnum) do
+    %SessionConfig{time_service: time_service, session_handler: handler, env: env} = config
+
+    now =
+      case time_service do
+        nil -> DateTime.utc_now()
+        {m, f, a} -> :erlang.apply(m, f, a)
+        %DateTime{} = v -> v
+      end
+
+    case :lists.keyfind(@field_sending_time, 1, fields) do
+      {@field_sending_time, st} ->
+        with {:ok, sending_dt} <- DateUtil.parse_date(st),
+             diff <- abs(DateTime.to_unix(now) - DateTime.to_unix(sending_dt)),
+             true <- diff <= 120 do
+          :ok
+        else
+          _ ->
+            handler.on_logout(session_name, env)
+            out_lastseq = out_lastseq + 1
+
+            reject_msg =
+              build_message(config, @msg_type_reject, out_lastseq, [
+                {@field_session_reject_reason, "10"},
+                {@field_text, "SendingTime acccuracy problem"}
+              ])
+
+            out_lastseq = out_lastseq + 1
+
+            logout_msg =
+              build_message(config, @msg_type_logout, out_lastseq, [
+                {@field_text, "Incorrect SendingTime value"}
+              ])
+
+            {:logout, [reject_msg, logout_msg],
+             %Session{
+               session
+               | status: :disconnecting,
+                 out_lastseq: out_lastseq,
+                 extra_bytes: other,
+                 in_lastseq: expected_seqnum
+             }}
+        end
+
+      _ ->
+        :ok
+    end
   end
 
   defp resend_messages(out_queue, begin_seq, end_seq) do
