@@ -133,8 +133,8 @@ Elixir can't beat the performance of C/C++/Rust, but this library lets you avoid
 communication time between an external FIX initiator and the Erlang VM.
 In addition, there are fewer dependencies and number of possible failure points.
 
-- HW: Laptop Dell Latitude E5570 Intel(R) Core(TM) i7-6600U CPU @ 2.60GHz 16 GB RAM
-- Elixir 1.5.1 / Erlang 19.2
+- HW: MacBook Pro M1 16 GB RAM
+- Elixir 1.18.3 / Erlang 27
 - Parser benchmark: Execution Report with 155 bytes.
 - Serializer benchmark: New Order Single with 115 bytes.
 
@@ -142,12 +142,12 @@ In addition, there are fewer dependencies and number of possible failure points.
 $ mix bench -d 2
 ...
 ## ExFixBench
-benchmark name                         iterations   average time
-Parse - Stage 1 (without validation)      1000000   5.25 µs/op
-Parse - Stage 1                            500000   6.88 µs/op
-Serialize                                  500000   11.66 µs/op
-Parse - Full Msg (without validation)      500000   13.58 µs/op
-Parse - Full Msg                           500000   15.31 µs/op
+benchmark name                         iterations   average time 
+Parse - Stage 1 (without validation)      1000000   2.31 µs/op
+Parse - Stage 1                           1000000   2.76 µs/op
+Serialize                                 1000000   5.65 µs/op
+Parse - Full Msg (without validation)      500000   5.84 µs/op
+Parse - Full Msg                           500000   6.74 µs/op
 ```
 
 ## Maintainer
