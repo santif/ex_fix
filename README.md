@@ -1,7 +1,7 @@
 # ExFIX
 
 [![Build Status](https://github.com/santif/ex_fix/actions/workflows/elixir.yml/badge.svg?branch=master)](https://github.com/santif/ex_fix/actions/workflows/elixir.yml)
-[![Coverage Status](https://coveralls.io/repos/github/santif/ex_fix/badge.svg?branch=master)](https://coveralls.io/github/santif/ex_fix?branch=master)
+[![Coverage Status](https://github.com/santif/ex_fix/actions/workflows/elixir.yml/badge.svg?branch=master)](https://github.com/santif/ex_fix/actions/workflows/elixir.yml)
 [![Tokei](https://tokei.rs/b1/github/santif/ex_fix?category=code)](https://tokei.rs/b1/github/santif/ex_fix?category=code)
 [![Hex.pm Version](http://img.shields.io/hexpm/v/ex_fix.svg?style=flat)](https://hex.pm/packages/ex_fix)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
