@@ -3,11 +3,9 @@ defmodule ExFix.Application do
   use Application
 
   def start(_type, _args) do
-    import Supervisor.Spec, warn: false
-
     children = [
-      worker(ExFix.DefaultSessionRegistry, []),
-      supervisor(ExFix.SessionSup, [])
+      {ExFix.DefaultSessionRegistry, []},
+      {ExFix.SessionSup, []}
     ]
 
     opts = [strategy: :rest_for_one, name: ExFix.Supervisor]
