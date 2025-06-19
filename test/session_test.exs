@@ -404,7 +404,7 @@ defmodule ExFix.SessionTest do
     assert reject_msg.msg_type == @msg_type_reject
     assert reject_msg.sender == "BUYSIDE"
     assert reject_msg.target == "SELLSIDE"
-    assert reject_msg.orig_sending_time == @t_jul
+    assert reject_msg.orig_sending_time == @t_plus_1
     assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "10"}
     assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "SendingTime acccuracy problem"}
   end
@@ -425,7 +425,7 @@ defmodule ExFix.SessionTest do
           "43=#{poss_dup_flag}|52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|"
       )
 
-    session = Session.set_time(session, @t_plus_1)
+    session = Session.set_time(session, @t_jul)
     {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :online
@@ -438,7 +438,7 @@ defmodule ExFix.SessionTest do
     assert reject_msg.msg_type == @msg_type_reject
     assert reject_msg.sender == "BUYSIDE"
     assert reject_msg.target == "SELLSIDE"
-    assert reject_msg.orig_sending_time == @t_plus_1
+    assert reject_msg.orig_sending_time == @t_jul
     assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "1"}
 
     assert :lists.keyfind("58", 1, reject_msg.body) ==
@@ -462,7 +462,7 @@ defmodule ExFix.SessionTest do
           "52=20170717-17:50:56.123|56=BUYSIDE|1=1234|10=$$$|"
       )
 
-    session = Session.set_time(session, @t_plus_1)
+    session = Session.set_time(session, @t_jul)
     {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
 
     assert Session.get_status(session) == :disconnecting
