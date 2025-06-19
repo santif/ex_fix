@@ -4,7 +4,7 @@ defmodule ExFix.Mixfile do
   def project do
     [
       app: :ex_fix,
-      version: "0.2.7",
+      version: "0.2.8",
       elixir: "~> 1.18",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
