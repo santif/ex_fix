@@ -4,8 +4,8 @@ defmodule ExFix.Mixfile do
   def project do
     [
       app: :ex_fix,
-      version: "0.2.7",
-      elixir: "~> 1.14",
+      version: "0.2.8",
+      elixir: "~> 1.18",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       description: description(),
@@ -42,7 +42,6 @@ defmodule ExFix.Mixfile do
 
   defp deps do
     [
-      {:calendar, "~> 1.0"},
       {:benchfella, "~> 0.3.5", only: :dev},
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},
       {:excoveralls, "~> 0.18", only: :test},

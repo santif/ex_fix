@@ -6,4 +6,6 @@ config :ex_fix,
   default_dictionary: ExFix.DefaultDictionary,
   logout_timeout: 2_000
 
+config :elixir, :time_zone_database, Calendar.UTCOnlyTimeZoneDatabase
+
 import_config "#{Mix.env()}.exs"
