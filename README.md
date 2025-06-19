@@ -15,7 +15,7 @@ Add `ex_fix` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
-  [{:ex_fix, "~> 0.2.5"}]
+  [{:ex_fix, "~> 0.2.6"}]
 end
 ```
 
