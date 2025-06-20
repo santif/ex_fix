@@ -44,4 +44,14 @@ defmodule ExFix.ApiTest do
     ExFix.stop_session("test_sess", CaptureRegistry)
     assert_receive {:stop_session, "test_sess"}
   end
+
+  test "start_session_initiator uses defaults" do
+    ExFix.start_session_initiator("defaults", "S", "T", FixEmptySessionHandler, session_registry: CaptureRegistry)
+
+    assert_receive {:start_session, "defaults", config}
+    assert config.hostname == "localhost"
+    assert config.port == 9876
+    assert config.log_incoming_msg == true
+    assert config.transport_mod == :gen_tcp
+  end
 end
