@@ -21,4 +21,3 @@ erl_crash.dump
 
 /bench/snapshots/
 /bench/graphs/
-/coverage.svg
