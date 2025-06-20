@@ -18,11 +18,14 @@ defmodule ExFix.InMessageTest do
     %{bin_msg: bin_msg}
   end
 
-  test "InMessage tests", %{bin_msg: bin_msg} do
+  test "get_field returns value", %{bin_msg: bin_msg} do
     fix_msg = Parser.parse1(bin_msg, Dictionary, 12_345)
     assert InMessage.get_field(fix_msg, "49") == "MARKET"
     assert InMessage.get_field(fix_msg, "52") == "20161007-16:28:50.802"
+  end
 
-    # assert InMessage.get_field(fix_msg, "SendingTime", TestDict) == Calendar.DateTime.Parse.rfc3339_utc
+  test "get_field returns nil for missing field", %{bin_msg: bin_msg} do
+    fix_msg = Parser.parse1(bin_msg, Dictionary, 12_345)
+    assert InMessage.get_field(fix_msg, "9999") == nil
   end
 end

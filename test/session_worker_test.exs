@@ -145,4 +145,65 @@ defmodule ExFix.SessionWorkerTest do
     SessionWorker.stop("sessiontest1")
     assert TestSessionRegistry.get_session_status("sessiontest1") == :disconnected
   end
+
+  test "higher seqnum triggers resend request" do
+
+    cfg = %SessionConfig{
+      name: "resend_sess",
+      mode: :initiator,
+      sender_comp_id: "SENDER",
+      target_comp_id: "TARGET",
+      session_handler: FixEmptySessionHandler,
+      dictionary: DefaultDictionary,
+      transport_mod: TestTransport,
+      transport_options: [test_pid: self()]
+    }
+
+    {:ok, _pid} = SessionWorker.start_link(cfg, TestSessionRegistry)
+    assert_receive {:data, _logon_msg}
+
+    now = DateTime.utc_now()
+    logon = %MessageToSend{seqnum: 1, sender: "TARGET", orig_sending_time: now, target: "SENDER", msg_type: "A", body: []}
+    TestTransport.receive_data("resend_sess", Serializer.serialize(logon, now))
+    Process.sleep(20)
+
+    msg = %MessageToSend{seqnum: 12, sender: "TARGET", orig_sending_time: now, target: "SENDER", msg_type: "8", body: []}
+    TestTransport.receive_data("resend_sess", Serializer.serialize(msg, now))
+
+    assert_receive {:data, resend}
+    parsed = Parser.parse(resend, DefaultDictionary, 1)
+    assert parsed.msg_type == "2"
+    SessionWorker.stop("resend_sess")
+  end
+
+  test "invalid SenderCompID triggers logout" do
+    cfg = %SessionConfig{
+      name: "badcomp",
+      mode: :initiator,
+      sender_comp_id: "SENDER",
+      target_comp_id: "TARGET",
+      session_handler: FixEmptySessionHandler,
+      dictionary: DefaultDictionary,
+      transport_mod: TestTransport,
+      transport_options: [test_pid: self()]
+    }
+
+    {:ok, pid} = SessionWorker.start_link(cfg, TestSessionRegistry)
+    ref = Process.monitor(pid)
+    assert_receive {:data, _}
+
+    now = DateTime.utc_now()
+    logon = %MessageToSend{seqnum: 1, sender: "TARGET", orig_sending_time: now, target: "SENDER", msg_type: "A", body: []}
+    TestTransport.receive_data("badcomp", Serializer.serialize(logon, now))
+    Process.sleep(20)
+
+    msg = %MessageToSend{seqnum: 2, sender: "OTHER", orig_sending_time: now, target: "SENDER", msg_type: "8", body: []}
+    TestTransport.receive_data("badcomp", Serializer.serialize(msg, now))
+
+    assert_receive {:data, reject}
+    assert_receive {:data, logout}
+    assert Parser.parse(reject, DefaultDictionary, 1).msg_type == "3"
+    assert Parser.parse(logout, DefaultDictionary, 1).msg_type == "5"
+    assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 1000
+  end
 end
