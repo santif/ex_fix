@@ -124,6 +124,23 @@ defmodule ExFix.ParserTest do
     assert fix_msg.original_fix_msg == data
   end
 
+  test "Parse message with invalid begin string" do
+    data = msg("8=FIX4.2|9=12|10=000|")
+    fix_msg = Parser.parse1(data, Dictionary, 1)
+    assert fix_msg.valid == false
+    assert fix_msg.error_reason == :begin_string_error
+    assert fix_msg.original_fix_msg == data
+  end
+
+  test "Parse message with unexpected seqnum" do
+    now = DateTime.from_naive!(~N[2017-07-17 17:50:56], "Etc/UTC")
+    data = build_message("0", 10, "SENDER", "TARGET", now)
+    fix_msg = Parser.parse1(data, Dictionary, 5)
+    assert fix_msg.valid == false
+    assert fix_msg.error_reason == :unexpected_seqnum
+    assert fix_msg.seqnum == 10
+  end
+
   test "Parse message - stage 1 - subject with 2 fields" do
     data =
       msg(
