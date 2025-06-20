@@ -28,6 +28,15 @@ end
 - Session registry
 - Two-phase parse of FIX messages
 
+When using SSL (`transport_mod: :ssl`), make sure the Erlang `:ssl` application
+is started by listing it under `extra_applications` in your `mix.exs`:
+
+```elixir
+def application do
+  [extra_applications: [:logger, :crypto, :ssl]]
+end
+```
+
 ## Usage
 
 ```elixir

@@ -12,7 +12,7 @@ defmodule ExFixInitiator.Mixfile do
 
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
-    [extra_applications: [:logger],
+    [extra_applications: [:logger, :ssl],
      mod: {ExFixInitiator.Application, []}]
   end
 
