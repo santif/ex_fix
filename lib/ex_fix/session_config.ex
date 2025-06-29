@@ -26,6 +26,7 @@ defmodule ExFix.SessionConfig do
             transport_mod: :gen_tcp,
             transport_options: [],
             time_service: nil,
+            sending_time_tolerance: 120,
             env: %{}
 
   @type t :: %__MODULE__{}
