@@ -480,7 +480,7 @@ defmodule ExFix.Session do
             reject_msg =
               build_message(config, @msg_type_reject, out_lastseq, [
                 {@field_session_reject_reason, "10"},
-                {@field_text, "SendingTime acccuracy problem"}
+                {@field_text, "SendingTime accuracy problem"}
               ])
 
             {:ok, [reject_msg],
@@ -720,7 +720,7 @@ defmodule ExFix.Session do
   end
 
   defp validate_sending_time(session_name, %Session{config: config, out_lastseq: out_lastseq} = session, %InMessage{fields: fields, other_msgs: other}, expected_seqnum) do
-    %SessionConfig{time_service: time_service, session_handler: handler, env: env} = config
+    %SessionConfig{time_service: time_service, session_handler: handler, env: env, sending_time_tolerance: tolerance} = config
 
     now =
       case time_service do
@@ -733,7 +733,7 @@ defmodule ExFix.Session do
       {@field_sending_time, st} ->
         with {:ok, sending_dt} <- DateUtil.parse_date(st),
              diff <- abs(DateTime.to_unix(now) - DateTime.to_unix(sending_dt)),
-             true <- diff <= 120 do
+             true <- diff <= tolerance do
           :ok
         else
           _ ->
@@ -743,7 +743,7 @@ defmodule ExFix.Session do
             reject_msg =
               build_message(config, @msg_type_reject, out_lastseq, [
                 {@field_session_reject_reason, "10"},
-                {@field_text, "SendingTime acccuracy problem"}
+                {@field_text, "SendingTime accuracy problem"}
               ])
 
             out_lastseq = out_lastseq + 1
