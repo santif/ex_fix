@@ -23,6 +23,7 @@ defmodule ExFix.SessionConfig do
             reconnect_interval: 15,
             reset_on_logon: true,
             validate_incoming_message: true,
+            validate_sending_time: true,
             transport_mod: :gen_tcp,
             transport_options: [],
             time_service: nil,
