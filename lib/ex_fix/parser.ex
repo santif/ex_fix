@@ -13,8 +13,8 @@ defmodule ExFix.Parser do
   @doc """
   Parse full message
   """
-  def parse(data, dictionary, expected_seqnum \\ nil, validate \\ true) do
-    with %InMessage{valid: true} = msg1 <- parse1(data, dictionary, expected_seqnum, validate),
+  def parse(data, dictionary, expected_seqnum \\ nil, validate \\ true, validate_sending_time \\ true) do
+    with %InMessage{valid: true} = msg1 <- parse1(data, dictionary, expected_seqnum, validate, validate_sending_time),
          msg2 <- parse2(msg1) do
       msg2
     end
@@ -23,9 +23,9 @@ defmodule ExFix.Parser do
   @doc """
   Parse - stage1
   """
-  def parse1(data, dictionary, expected_seqnum \\ nil, validate \\ true)
+  def parse1(data, dictionary, expected_seqnum \\ nil, validate \\ true, validate_sending_time \\ true)
 
-  def parse1(<<"8=FIXT.1.1", @soh, "9=", rest::binary>>, dictionary, expected_seqnum, validate) do
+  def parse1(<<"8=FIXT.1.1", @soh, "9=", rest::binary>>, dictionary, expected_seqnum, validate, _validate_sending_time) do
     [str_len, rest1] = :binary.split(rest, <<@soh>>)
     {len, _} = Integer.parse(str_len)
 
@@ -64,7 +64,7 @@ defmodule ExFix.Parser do
     end
   end
 
-  def parse1(<<"8=", _rest::binary>> = orig_msg, _dictionary, _expected_seqnum, _validate) do
+  def parse1(<<"8=", _rest::binary>> = orig_msg, _dictionary, _expected_seqnum, _validate, _validate_sending_time) do
     %InMessage{
       valid: false,
       msg_type: nil,
@@ -75,7 +75,7 @@ defmodule ExFix.Parser do
     }
   end
 
-  def parse1(data, _dictionary, _expected_seqnum, _validate) do
+  def parse1(data, _dictionary, _expected_seqnum, _validate, _validate_sending_time) do
     %InMessage{
       valid: false,
       msg_type: nil,

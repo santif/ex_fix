@@ -224,6 +224,7 @@ defmodule ExFix.Session do
           config: %SessionConfig{
             name: session_name,
             validate_incoming_message: validate,
+          validate_sending_time: validate_sending_time,
             log_incoming_msg: log_incoming_msg,
             dictionary: dictionary
           },
@@ -239,7 +240,8 @@ defmodule ExFix.Session do
         <<extra_bytes::binary, data::binary>>,
         dictionary,
         expected_seqnum,
-        validate
+      validate,
+      validate_sending_time
       )
 
     case msg.valid do
@@ -717,6 +719,10 @@ defmodule ExFix.Session do
     |> :crypto.strong_rand_bytes()
     |> Base.encode64()
     |> binary_part(0, len)
+  end
+
+  defp validate_sending_time(_session_name, %Session{config: %SessionConfig{validate_sending_time: false}}, _msg, _expected_seqnum) do
+    :ok
   end
 
   defp validate_sending_time(session_name, %Session{config: config, out_lastseq: out_lastseq} = session, %InMessage{fields: fields, other_msgs: other}, expected_seqnum) do

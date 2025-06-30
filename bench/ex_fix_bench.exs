@@ -42,6 +42,21 @@ defmodule ExFixBench do
     Parser.parse(data, @dictionary, nil, false)
   end
 
+  bench "Parse - Stage 1 (with SendingTime validation)", [data: get_parse_data_with_sending_time()] do
+    Parser.parse1(data, @dictionary, 12_345, true, true) # Assuming validate_sending_time is the 5th arg
+  end
+
+  bench "Parse - Full Msg (with SendingTime validation)", [data: get_parse_data_with_sending_time()] do
+    Parser.parse(data, @dictionary, 12_345, true, true) # Assuming validate_sending_time is the 5th arg
+  end
+
+  bench "Parse - Stage 1 (without SendingTime validation)", [data: get_parse_data_with_sending_time()] do
+    Parser.parse1(data, @dictionary, 12_345, true, false) # Assuming validate_sending_time is the 5th arg
+  end
+
+  bench "Parse - Full Msg (without SendingTime validation)", [data: get_parse_data_with_sending_time()] do
+    Parser.parse(data, @dictionary, 12_345, true, false) # Assuming validate_sending_time is the 5th arg
+  end
   ##
   ## Private functions
   ##
@@ -55,6 +70,22 @@ defmodule ExFixBench do
     str_data = "8=FIXT.1.1|9=131|35=8|34=12345|49=SELL|52=20161007-16:28:50.802|" <>
       "56=BUY|1=531|11=99|14=5|17=872|31=1.2|32=5|37=456|38=5|39=2|54=1|55=ABC|" <>
       "150=F|151=0|10=240|"
+    :binary.replace(str_data, "|", << 1 >>, [:global])
+  end
+
+  defp get_parse_data_with_sending_time() do
+    # Similar to get_parse_data but ensures SendingTime (tag 52) is present
+    # For the benchmark, we'll use a valid SendingTime relative to now.
+    # Benchfella executes functions in `setup` block before each run,
+    # so we can't directly use DateTime.utc_now() here as it would be fixed at compile time.
+    # Instead, we'll construct a string that's highly likely to be valid.
+    # A more robust way would be to pass the current time into this function if Benchfella allowed it,
+    # or modify the parser to accept a "current time" for validation purposes in tests.
+    # For now, this simplification should be acceptable for benchmarking the validation logic itself.
+    sending_time = DateTime.utc_now() |> DateTime.to_iso8601() |> String.slice(0, 17) # YYYYMMDD-HH:MM:SS
+    str_data = "8=FIXT.1.1|9=131|35=8|34=12345|49=SELL|52=#{sending_time}.000|" <>
+                 "56=BUY|1=531|11=99|14=5|17=872|31=1.2|32=5|37=456|38=5|39=2|54=1|55=ABC|" <>
+                 "150=F|151=0|10=240|"
     :binary.replace(str_data, "|", << 1 >>, [:global])
   end
 
