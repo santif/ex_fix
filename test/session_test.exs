@@ -406,7 +406,7 @@ defmodule ExFix.SessionTest do
     assert reject_msg.target == "SELLSIDE"
     assert reject_msg.orig_sending_time == @t_plus_1
     assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "10"}
-    assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "SendingTime acccuracy problem"}
+    assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "SendingTime accuracy problem"}
   end
 
   test "PossDupFlag=Y and OrigSendingTime not specified (p. 51)", %{config: cfg} do
@@ -617,7 +617,7 @@ defmodule ExFix.SessionTest do
     assert reject_msg.target == "SELLSIDE"
     assert reject_msg.orig_sending_time == @t_plus_1
     assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "10"}
-    assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "SendingTime acccuracy problem"}
+    assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "SendingTime accuracy problem"}
 
     assert logout_msg.seqnum == 7
     assert logout_msg.msg_type == @msg_type_logout
@@ -625,6 +625,36 @@ defmodule ExFix.SessionTest do
     assert logout_msg.target == "SELLSIDE"
     assert logout_msg.orig_sending_time == @t_plus_1
     assert :lists.keyfind("58", 1, logout_msg.body) == {"58", "Incorrect SendingTime value"}
+  end
+
+  test "SendingTime accuracy with custom tolerance", %{config: cfg} do
+    # Test with custom tolerance of 30 seconds
+    custom_config = %SessionConfig{cfg | sending_time_tolerance: 30}
+    {:ok, session} = Session.init(custom_config)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    seq = 11
+    # Use 1 minute difference (60 seconds), which should exceed 30 second tolerance
+    incoming_data =
+      build_message(
+        @msg_type_execution_report,
+        seq,
+        "SELLSIDE",
+        "BUYSIDE",
+        DateTime.add(@t0, 60, :second),
+        [{@field_account, "1234"}]
+      )
+
+    session = Session.set_time(session, @t0)
+    {:logout, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :disconnecting
+    assert length(msgs_to_send) == 2
+    [reject_msg, _logout_msg] = msgs_to_send
+
+    assert reject_msg.msg_type == @msg_type_reject
+    assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "10"}
+    assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "SendingTime accuracy problem"}
   end
 
   test "Checksum error (p. 55)", %{config: cfg} do
