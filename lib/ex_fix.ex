@@ -70,8 +70,16 @@ defmodule ExFix do
   alias ExFix.OutMessage
   alias ExFix.SessionHandler
 
-  @default_dictionary Application.compile_env(:ex_fix, :default_dictionary, ExFix.DefaultDictionary)
-  @session_registry Application.compile_env(:ex_fix, :session_registry, ExFix.DefaultSessionRegistry)
+  @default_dictionary Application.compile_env(
+                        :ex_fix,
+                        :default_dictionary,
+                        ExFix.DefaultDictionary
+                      )
+  @session_registry Application.compile_env(
+                      :ex_fix,
+                      :session_registry,
+                      ExFix.DefaultSessionRegistry
+                    )
 
   @doc """
   Starts FIX session initiator
@@ -103,6 +111,8 @@ defmodule ExFix do
         transport_mod: :gen_tcp,
         transport_options: [],
         time_service: nil,
+        sending_time_tolerance: 120,
+        validate_sending_time: true,
         env: %{}
       })
 

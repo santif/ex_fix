@@ -462,19 +462,21 @@ defmodule ExFix.Session do
         %Session{config: config, out_lastseq: out_lastseq} = session,
         %InMessage{poss_dup: true, seqnum: seqnum, fields: fields} = msg
       ) do
+    validate = config.validate_sending_time
+
     case :lists.keyfind(@field_orig_sending_time, 1, fields) do
       {@field_orig_sending_time, orig_sending_time} ->
         {@field_sending_time, sending_time} = :lists.keyfind(@field_sending_time, 1, fields)
 
-        case orig_sending_time <= sending_time do
-          true ->
+        cond do
+          not validate or orig_sending_time <= sending_time ->
             %SessionConfig{name: ^session_name, session_handler: session_handler, env: env} =
               config
 
             session_handler.on_app_message(session_name, msg_type, msg, env)
             {:ok, [], %Session{session | in_lastseq: seqnum, extra_bytes: msg.other_msgs}}
 
-          false ->
+          true ->
             out_lastseq = out_lastseq + 1
 
             reject_msg =
@@ -719,52 +721,67 @@ defmodule ExFix.Session do
     |> binary_part(0, len)
   end
 
-  defp validate_sending_time(session_name, %Session{config: config, out_lastseq: out_lastseq} = session, %InMessage{fields: fields, other_msgs: other}, expected_seqnum) do
-    %SessionConfig{time_service: time_service, session_handler: handler, env: env, sending_time_tolerance: tolerance} = config
+  defp validate_sending_time(
+         session_name,
+         %Session{config: config, out_lastseq: out_lastseq} = session,
+         %InMessage{fields: fields, other_msgs: other},
+         expected_seqnum
+       ) do
+    %SessionConfig{
+      time_service: time_service,
+      session_handler: handler,
+      env: env,
+      sending_time_tolerance: tolerance,
+      validate_sending_time: validate
+    } = config
 
-    now =
-      case time_service do
-        nil -> DateTime.utc_now()
-        {m, f, a} -> :erlang.apply(m, f, a)
-        %DateTime{} = v -> v
-      end
-
-    case :lists.keyfind(@field_sending_time, 1, fields) do
-      {@field_sending_time, st} ->
-        with {:ok, sending_dt} <- DateUtil.parse_date(st),
-             diff <- abs(DateTime.to_unix(now) - DateTime.to_unix(sending_dt)),
-             true <- diff <= tolerance do
-          :ok
-        else
-          _ ->
-            handler.on_logout(session_name, env)
-            out_lastseq = out_lastseq + 1
-
-            reject_msg =
-              build_message(config, @msg_type_reject, out_lastseq, [
-                {@field_session_reject_reason, "10"},
-                {@field_text, "SendingTime accuracy problem"}
-              ])
-
-            out_lastseq = out_lastseq + 1
-
-            logout_msg =
-              build_message(config, @msg_type_logout, out_lastseq, [
-                {@field_text, "Incorrect SendingTime value"}
-              ])
-
-            {:logout, [reject_msg, logout_msg],
-             %Session{
-               session
-               | status: :disconnecting,
-                 out_lastseq: out_lastseq,
-                 extra_bytes: other,
-                 in_lastseq: expected_seqnum
-             }}
+    if not validate do
+      :ok
+    else
+      now =
+        case time_service do
+          nil -> DateTime.utc_now()
+          {m, f, a} -> :erlang.apply(m, f, a)
+          %DateTime{} = v -> v
         end
 
-      _ ->
-        :ok
+      case :lists.keyfind(@field_sending_time, 1, fields) do
+        {@field_sending_time, st} ->
+          with {:ok, sending_dt} <- DateUtil.parse_date(st),
+               diff <- abs(DateTime.to_unix(now) - DateTime.to_unix(sending_dt)),
+               true <- diff <= tolerance do
+            :ok
+          else
+            _ ->
+              handler.on_logout(session_name, env)
+              out_lastseq = out_lastseq + 1
+
+              reject_msg =
+                build_message(config, @msg_type_reject, out_lastseq, [
+                  {@field_session_reject_reason, "10"},
+                  {@field_text, "SendingTime accuracy problem"}
+                ])
+
+              out_lastseq = out_lastseq + 1
+
+              logout_msg =
+                build_message(config, @msg_type_logout, out_lastseq, [
+                  {@field_text, "Incorrect SendingTime value"}
+                ])
+
+              {:logout, [reject_msg, logout_msg],
+               %Session{
+                 session
+                 | status: :disconnecting,
+                   out_lastseq: out_lastseq,
+                   extra_bytes: other,
+                   in_lastseq: expected_seqnum
+               }}
+          end
+
+        _ ->
+          :ok
+      end
     end
   end
 
