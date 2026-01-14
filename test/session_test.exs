@@ -593,6 +593,7 @@ defmodule ExFix.SessionTest do
     session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
 
     seq = 11
+
     incoming_data =
       build_message(
         @msg_type_execution_report,
@@ -655,6 +656,31 @@ defmodule ExFix.SessionTest do
     assert reject_msg.msg_type == @msg_type_reject
     assert :lists.keyfind("373", 1, reject_msg.body) == {"373", "10"}
     assert :lists.keyfind("58", 1, reject_msg.body) == {"58", "SendingTime accuracy problem"}
+  end
+
+  test "SendingTime accuracy validation can be disabled", %{config: cfg} do
+    custom_config = %SessionConfig{cfg | validate_sending_time: false}
+    {:ok, session} = Session.init(custom_config)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    seq = 11
+
+    incoming_data =
+      build_message(
+        @msg_type_execution_report,
+        seq,
+        "SELLSIDE",
+        "BUYSIDE",
+        @t_plus_4min,
+        [{@field_account, "1234"}]
+      )
+
+    session = Session.set_time(session, @t_plus_1)
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert Session.get_in_lastseq(session) == seq
+    assert msgs_to_send == []
   end
 
   test "Checksum error (p. 55)", %{config: cfg} do

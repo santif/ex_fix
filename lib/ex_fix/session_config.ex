@@ -27,6 +27,7 @@ defmodule ExFix.SessionConfig do
             transport_options: [],
             time_service: nil,
             sending_time_tolerance: 120,
+            validate_sending_time: true,
             env: %{}
 
   @type t :: %__MODULE__{}
