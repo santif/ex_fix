@@ -1,54 +1,54 @@
 name: lightweight
 version: 1
-description: "Flujo ligero para fixes, refactors y mejoras menores: proposal → tasks"
+description: "Lightweight flow for fixes, refactors, and minor improvements: proposal → tasks"
 artifacts:
   - id: proposal
     generates: proposal.md
-    description: Descripción concisa del cambio, motivación y alcance
+    description: Concise description of the change, motivation, and scope
     template: proposal.md
     instruction: |
-      Crear un proposal breve y directo. Sin specs ni diseño — esto es para
-      cambios pequeños o medianos donde la implementación es clara.
+      Create a brief and direct proposal. No specs or design — this is for
+      small to medium changes where the implementation is clear.
 
-      Secciones:
-      - **Por qué**: 1-2 oraciones sobre el problema u oportunidad.
-      - **Qué cambia**: Lista de cambios concretos. Marcar breaking changes con **BREAKING**.
-      - **Impacto**: Código, APIs, dependencias o sistemas afectados.
+      Sections:
+      - **Why**: 1-2 sentences about the problem or opportunity.
+      - **What changes**: List of concrete changes. Mark breaking changes with **BREAKING**.
+      - **Impact**: Affected code, APIs, dependencies, or systems.
 
-      Mantenerlo en menos de media página. Si el cambio necesita specs o
-      diseño detallado, probablemente debería usar el schema spec-driven.
+      Keep it under half a page. If the change needs specs or
+      detailed design, it should probably use the spec-driven schema.
     requires: []
 
   - id: tasks
     generates: tasks.md
-    description: Checklist de implementación con tareas rastreables
+    description: Implementation checklist with trackable tasks
     template: tasks.md
     instruction: |
-      Crear la lista de tareas para implementar el cambio.
+      Create the task list to implement the change.
 
-      Formato:
-      - Cada tarea DEBE ser un checkbox: `- [ ] N. Descripción`
-      - Tareas pequeñas, completables en una sesión
-      - Ordenar por dependencia (qué se hace primero)
-      - Incluir tareas de test junto a las de implementación
-      - Especificar qué módulos/archivos se ven afectados
+      Format:
+      - Each task MUST be a checkbox: `- [ ] N. Description`
+      - Small tasks, completable in a single session
+      - Order by dependency (what comes first)
+      - Include test tasks alongside implementation tasks
+      - Specify which modules/files are affected
 
-      Ejemplo:
+      Example:
       ```
-      ## Tareas
+      ## Tasks
 
-      - [ ] 1. Agregar campo `timeout` a `SessionConfig` (`lib/ex_fix/session_config.ex`)
-      - [ ] 2. Usar `timeout` en `SessionWorker.handle_info/2` (`lib/ex_fix/session_worker.ex`)
-      - [ ] 3. Agregar tests para timeout configurable (`test/session_worker_test.exs`)
+      - [ ] 1. Add `timeout` field to `SessionConfig` (`lib/ex_fix/session_config.ex`)
+      - [ ] 2. Use `timeout` in `SessionWorker.handle_info/2` (`lib/ex_fix/session_worker.ex`)
+      - [ ] 3. Add tests for configurable timeout (`test/session_worker_test.exs`)
       ```
 
-      Referenciar el proposal para contexto.
+      Reference the proposal for context.
     requires:
       - proposal
 apply:
   requires: [tasks]
   tracks: tasks.md
   instruction: |
-    Leer el proposal para contexto, trabajar las tareas pendientes,
-    marcar como completadas a medida que se avanza.
-    Pausar si hay blockers o se necesita clarificación.
+    Read the proposal for context, work through pending tasks,
+    mark as completed as you progress.
+    Pause if there are blockers or clarification is needed.

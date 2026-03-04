@@ -43,6 +43,8 @@ The registry MUST track these states:
 | `:disconnected` | Disconnected normally, no reconnection |
 | `:reconnecting` | Connection lost, pending reconnection |
 
+> **Note:** These are **lifecycle states** tracked by the registry for process management, distinct from the session's internal protocol states (`:offline`, `:connecting`, `:online`, `:disconnecting`) defined in the session-management spec. The two state models serve different purposes: the registry tracks process lifecycle across restarts, while the session FSM tracks protocol state within a single connection.
+
 #### Scenario: State transition
 - **WHEN** a session is started and completes the logon
 - **THEN** the state transitions from `:connecting` to `:connected`

@@ -1,11 +1,11 @@
-## Por qué
+## Why
 
-<!-- Motivación del cambio -->
+<!-- Motivation for the change -->
 
-## Qué cambia
+## What changes
 
-<!-- Lista de cambios concretos -->
+<!-- List of concrete changes -->
 
-## Impacto
+## Impact
 
-<!-- Código, APIs, dependencias o sistemas afectados -->
+<!-- Affected code, APIs, dependencies, or systems -->

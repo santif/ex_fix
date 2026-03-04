@@ -281,22 +281,6 @@ There MUST exist a `DefaultDictionary` that returns `nil` for all message types 
 - **WHEN** the DefaultDictionary is used
 - **THEN** all messages are fully parsed in phase 1
 
-### Requirement: Partial message handling
-
-The parser MUST support fragmented TCP data:
-
-- Buffer incomplete bytes between receptions
-- Concatenate new data with the existing buffer before parsing
-- Support multiple FIX messages in a single TCP segment
-
-#### Scenario: Message fragmented across two TCP segments
-- **WHEN** a FIX message arrives split across two TCP segments
-- **THEN** bytes from the first segment are buffered and parsing completes upon receiving the second
-
-#### Scenario: Multiple messages in one segment
-- **WHEN** a TCP segment contains two complete FIX messages
-- **THEN** both messages are parsed correctly
-
 ### Requirement: Parsing optimization
 
 Critical parser and serializer functions MUST use `@compile {:inline, ...}` to reduce call overhead in the hot path.

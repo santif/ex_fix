@@ -1,5 +1,5 @@
-## Tareas
+## Tasks
 
-- [ ] 1. Tarea
-- [ ] 2. Tarea
-- [ ] 3. Tarea
+- [ ] 1. Task
+- [ ] 2. Task
+- [ ] 3. Task

@@ -28,7 +28,6 @@ context: |
   - Message validation: checksum, body length, sending time tolerance
 
   Code and commit language: English
-  OpenSpec artifact language: English
 
 rules:
   proposal:

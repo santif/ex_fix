@@ -17,6 +17,8 @@ The session MUST transition between four states:
 
 Main flow: `offline → connecting → online → disconnecting → offline`
 
+> **Note:** These are the **internal protocol states** of the `Session` state machine. The `SessionRegistry` tracks a separate set of **lifecycle states** (`:connecting`, `:connected`, `:disconnecting`, `:disconnected`, `:reconnecting`) — see the session-registry spec. The two state models serve different purposes: protocol FSM vs process lifecycle tracking.
+
 #### Scenario: Main state flow
 - **WHEN** a session is started and the logon is successful
 - **THEN** the session transitions `offline → connecting → online`
@@ -322,6 +324,10 @@ Each session MUST be independently configurable with:
 | `time_service` | nil | nil (UTC now), fixed DateTime, or {m, f, a} |
 | `max_output_buf_count` | 1000 | Size of sent messages buffer |
 | `env` | %{} | Custom map passed to callbacks |
+| `default_applverid` | `"9"` | DefaultApplVerID (tag 1137) sent in Logon |
+| `logon_encrypt_method` | `"0"` | EncryptMethod (tag 98) sent in Logon |
+| `dictionary` | `ExFix.DefaultDictionary` | Dictionary module for message routing |
+| `transport_options` | `[]` | Extra options passed to transport `connect/3` |
 
 #### Scenario: Default configuration
 - **WHEN** a session is started without options
