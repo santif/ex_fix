@@ -1,332 +1,332 @@
-# Gestión de Sesión FIX
+# FIX Session Management
 
 ## Purpose
 
-Implementación del protocolo de sesión FIXT.1.1 como iniciador (buy-side).
+Implementation of the FIXT.1.1 session protocol as initiator (buy-side).
 
 ## Requirements
 
-### Requirement: Estados de sesión
+### Requirement: Session states
 
-La sesión MUST transicionar entre cuatro estados:
+The session MUST transition between four states:
 
-- **offline** — estado inicial, sin conexión
-- **connecting** — Logon enviado, esperando respuesta
-- **online** — sesión activa, lista para mensajes de aplicación
-- **disconnecting** — Logout iniciado o recibido, esperando cierre
+- **offline** — initial state, no connection
+- **connecting** — Logon sent, awaiting response
+- **online** — active session, ready for application messages
+- **disconnecting** — Logout initiated or received, awaiting close
 
-Flujo principal: `offline → connecting → online → disconnecting → offline`
+Main flow: `offline → connecting → online → disconnecting → offline`
 
-#### Scenario: Flujo principal de estados
-- **WHEN** se inicia una sesión y el logon es exitoso
-- **THEN** la sesión transiciona `offline → connecting → online`
+#### Scenario: Main state flow
+- **WHEN** a session is started and the logon is successful
+- **THEN** the session transitions `offline → connecting → online`
 
-#### Scenario: Cierre graceful
-- **WHEN** se inicia el cierre de una sesión online
-- **THEN** la sesión transiciona `online → disconnecting → offline`
+#### Scenario: Graceful close
+- **WHEN** closing of an online session is initiated
+- **THEN** the session transitions `online → disconnecting → offline`
 
-### Requirement: Inicio de sesión
+### Requirement: Session startup
 
-Al iniciar, el sistema MUST conectarse al host/puerto configurado y enviar un mensaje Logon con:
+On startup, the system MUST connect to the configured host/port and send a Logon message with:
 
 - EncryptMethod (tag 98)
 - HeartBtInt (tag 108)
-- ResetSeqNumFlag (tag 141), si `reset_on_logon: true`
-- Username (tag 553) y Password (tag 554), si están configurados
+- ResetSeqNumFlag (tag 141), if `reset_on_logon: true`
+- Username (tag 553) and Password (tag 554), if configured
 - DefaultApplVerID (tag 1137)
 
-La sesión transiciona a `:connecting` hasta recibir el Logon de respuesta.
+The session transitions to `:connecting` until the response Logon is received.
 
-#### Scenario: Logon con credenciales
-- **WHEN** se inicia una sesión con `username` y `password` configurados
-- **THEN** el mensaje Logon incluye tags 553 y 554
+#### Scenario: Logon with credentials
+- **WHEN** a session is started with `username` and `password` configured
+- **THEN** the Logon message includes tags 553 and 554
 
-#### Scenario: Logon sin credenciales
-- **WHEN** se inicia una sesión sin `username` ni `password`
-- **THEN** el mensaje Logon no incluye tags 553 y 554
+#### Scenario: Logon without credentials
+- **WHEN** a session is started without `username` or `password`
+- **THEN** the Logon message does not include tags 553 and 554
 
-#### Scenario: Logon con reset de secuencia
-- **WHEN** se inicia una sesión con `reset_on_logon: true`
-- **THEN** el mensaje Logon incluye ResetSeqNumFlag (tag 141)
+#### Scenario: Logon with sequence reset
+- **WHEN** a session is started with `reset_on_logon: true`
+- **THEN** the Logon message includes ResetSeqNumFlag (tag 141)
 
-### Requirement: Cierre de sesión
+### Requirement: Session close
 
-El sistema MUST soportar cierre graceful enviando Logout y esperando respuesta.
-Si no hay respuesta en 2 segundos, MUST forzar el cierre de la conexión.
+The system MUST support graceful close by sending Logout and awaiting a response.
+If there is no response within 2 seconds, it MUST force-close the connection.
 
-Al recibir un Logout no solicitado, MUST responder con Logout y cerrar.
+Upon receiving an unsolicited Logout, it MUST respond with Logout and close.
 
-#### Scenario: Cierre graceful con respuesta
-- **WHEN** se envía Logout y la contraparte responde con Logout
-- **THEN** la conexión se cierra normalmente
+#### Scenario: Graceful close with response
+- **WHEN** Logout is sent and the counterparty responds with Logout
+- **THEN** the connection closes normally
 
-#### Scenario: Cierre graceful sin respuesta
-- **WHEN** se envía Logout y no hay respuesta en 2 segundos
-- **THEN** se fuerza el cierre de la conexión
+#### Scenario: Graceful close without response
+- **WHEN** Logout is sent and there is no response within 2 seconds
+- **THEN** the connection is force-closed
 
-#### Scenario: Logout no solicitado
-- **WHEN** se recibe un Logout sin haberlo iniciado
-- **THEN** se responde con Logout y se cierra la conexión
+#### Scenario: Unsolicited Logout
+- **WHEN** a Logout is received without having initiated one
+- **THEN** a Logout is sent in response and the connection is closed
 
-### Requirement: Tipos de mensaje soportados
+### Requirement: Supported message types
 
-El sistema MUST procesar estos mensajes a nivel de sesión:
+The system MUST process these messages at the session level:
 
-| Tipo | Código | Comportamiento |
-|------|--------|----------------|
-| Logon | A | Establecer sesión, intercambiar parámetros |
-| Heartbeat | 0 | Keep-alive, respuesta a TestRequest |
-| TestRequest | 1 | Verificar conectividad, requiere Heartbeat de respuesta |
-| ResendRequest | 2 | Solicitar retransmisión de mensajes perdidos |
-| Reject | 3 | Rechazo a nivel de sesión |
-| SequenceReset | 4 | Ajustar números de secuencia (con/sin gap-fill) |
-| Logout | 5 | Terminación de sesión |
+| Type | Code | Behavior |
+|------|------|----------|
+| Logon | A | Establish session, exchange parameters |
+| Heartbeat | 0 | Keep-alive, response to TestRequest |
+| TestRequest | 1 | Verify connectivity, requires Heartbeat response |
+| ResendRequest | 2 | Request retransmission of lost messages |
+| Reject | 3 | Session-level rejection |
+| SequenceReset | 4 | Adjust sequence numbers (with/without gap-fill) |
+| Logout | 5 | Session termination |
 
-Cualquier otro tipo de mensaje MUST ser ruteado al callback `on_app_message` del SessionHandler.
+Any other message type MUST be routed to the `on_app_message` callback of the SessionHandler.
 
-#### Scenario: Mensaje de sesión conocido
-- **WHEN** se recibe un mensaje con tipo A, 0, 1, 2, 3, 4 o 5
-- **THEN** se procesa a nivel de sesión
+#### Scenario: Known session message
+- **WHEN** a message with type A, 0, 1, 2, 3, 4, or 5 is received
+- **THEN** it is processed at the session level
 
-#### Scenario: Mensaje de aplicación
-- **WHEN** se recibe un mensaje con tipo distinto a los de sesión (ej: "D", "8")
-- **THEN** se rutea al callback `on_app_message`
+#### Scenario: Application message
+- **WHEN** a message with a type other than the session types is received (e.g.: "D", "8")
+- **THEN** it is routed to the `on_app_message` callback
 
-### Requirement: Respuesta automática a TestRequest
+### Requirement: Automatic TestRequest response
 
-Al recibir un TestRequest, el sistema MUST responder automáticamente con un Heartbeat conteniendo el mismo TestReqID (tag 112).
+Upon receiving a TestRequest, the system MUST automatically respond with a Heartbeat containing the same TestReqID (tag 112).
 
-#### Scenario: TestRequest recibido
-- **WHEN** se recibe un TestRequest con TestReqID="ABC"
-- **THEN** se responde con Heartbeat conteniendo TestReqID="ABC"
+#### Scenario: TestRequest received
+- **WHEN** a TestRequest with TestReqID="ABC" is received
+- **THEN** a Heartbeat containing TestReqID="ABC" is sent in response
 
-### Requirement: Procesamiento de ResendRequest
+### Requirement: ResendRequest processing
 
-Al recibir un ResendRequest, el sistema MUST:
+Upon receiving a ResendRequest, the system MUST:
 
-- Retransmitir mensajes de aplicación del rango solicitado con PossDupFlag="Y"
-- Reemplazar mensajes administrativos (Logon, Heartbeat, TestRequest, etc.) con SequenceReset-GapFill
-- Preservar el OrigSendingTime de los mensajes retransmitidos
+- Retransmit application messages from the requested range with PossDupFlag="Y"
+- Replace administrative messages (Logon, Heartbeat, TestRequest, etc.) with SequenceReset-GapFill
+- Preserve the OrigSendingTime of retransmitted messages
 
-#### Scenario: ResendRequest de mensajes de aplicación
-- **WHEN** se recibe un ResendRequest para un rango que contiene mensajes de aplicación
-- **THEN** se retransmiten con PossDupFlag="Y" y OrigSendingTime preservado
+#### Scenario: ResendRequest for application messages
+- **WHEN** a ResendRequest is received for a range containing application messages
+- **THEN** they are retransmitted with PossDupFlag="Y" and preserved OrigSendingTime
 
-#### Scenario: ResendRequest de mensajes administrativos
-- **WHEN** se recibe un ResendRequest para un rango que contiene mensajes administrativos
-- **THEN** se reemplazan con SequenceReset-GapFill
+#### Scenario: ResendRequest for administrative messages
+- **WHEN** a ResendRequest is received for a range containing administrative messages
+- **THEN** they are replaced with SequenceReset-GapFill
 
 ### Requirement: SequenceReset
 
-El sistema MUST soportar dos variantes:
+The system MUST support two variants:
 
-- **GapFill** (GapFillFlag="Y"): ajusta el número de secuencia esperado sin resetear la sesión
-- **Reset** (GapFillFlag="N" o ausente): resetea el número de secuencia esperado a NewSeqNo
+- **GapFill** (GapFillFlag="Y"): adjusts the expected sequence number without resetting the session
+- **Reset** (GapFillFlag="N" or absent): resets the expected sequence number to NewSeqNo
 
-MUST rechazar intentos de disminuir el número de secuencia.
+MUST reject attempts to decrease the sequence number.
 
 #### Scenario: GapFill
-- **WHEN** se recibe SequenceReset con GapFillFlag="Y" y NewSeqNo mayor al esperado
-- **THEN** se ajusta el número de secuencia esperado a NewSeqNo
+- **WHEN** a SequenceReset with GapFillFlag="Y" and NewSeqNo greater than expected is received
+- **THEN** the expected sequence number is adjusted to NewSeqNo
 
 #### Scenario: Reset
-- **WHEN** se recibe SequenceReset con GapFillFlag="N" y NewSeqNo mayor al esperado
-- **THEN** se resetea el número de secuencia esperado a NewSeqNo
+- **WHEN** a SequenceReset with GapFillFlag="N" and NewSeqNo greater than expected is received
+- **THEN** the expected sequence number is reset to NewSeqNo
 
-#### Scenario: Intento de disminuir secuencia
-- **WHEN** se recibe SequenceReset con NewSeqNo menor al esperado
-- **THEN** se rechaza el mensaje
+#### Scenario: Attempt to decrease sequence
+- **WHEN** a SequenceReset with NewSeqNo less than expected is received
+- **THEN** the message is rejected
 
-### Requirement: Tracking de secuencia
+### Requirement: Sequence tracking
 
-El sistema MUST mantener contadores independientes para mensajes entrantes (`in_lastseq`) y salientes (`out_lastseq`), incrementándolos con cada mensaje procesado/enviado.
+The system MUST maintain independent counters for incoming (`in_lastseq`) and outgoing (`out_lastseq`) messages, incrementing them with each processed/sent message.
 
-#### Scenario: Incremento de secuencia entrante
-- **WHEN** se recibe un mensaje válido
-- **THEN** `in_lastseq` se incrementa en 1
+#### Scenario: Incoming sequence increment
+- **WHEN** a valid message is received
+- **THEN** `in_lastseq` is incremented by 1
 
-#### Scenario: Incremento de secuencia saliente
-- **WHEN** se envía un mensaje
-- **THEN** `out_lastseq` se incrementa en 1
+#### Scenario: Outgoing sequence increment
+- **WHEN** a message is sent
+- **THEN** `out_lastseq` is incremented by 1
 
-### Requirement: Detección de gaps
+### Requirement: Gap detection
 
-Si un mensaje llega con número de secuencia mayor al esperado, el sistema MUST:
+If a message arrives with a sequence number greater than expected, the system MUST:
 
-- Encolar el mensaje para procesamiento posterior
-- Enviar un ResendRequest para el rango faltante
+- Queue the message for later processing
+- Send a ResendRequest for the missing range
 
-#### Scenario: Gap detectado
-- **WHEN** se espera secuencia 5 y llega un mensaje con secuencia 8
-- **THEN** se encola el mensaje y se envía ResendRequest para el rango 5-7
+#### Scenario: Gap detected
+- **WHEN** sequence 5 is expected and a message with sequence 8 arrives
+- **THEN** the message is queued and a ResendRequest is sent for range 5-7
 
-### Requirement: Secuencia baja sin PossDupFlag
+### Requirement: Low sequence without PossDupFlag
 
-Si un mensaje llega con número de secuencia menor al esperado y sin PossDupFlag, el sistema MUST enviar Logout con razón "MsgSeqNum too low" y desconectar.
+If a message arrives with a sequence number less than expected and without PossDupFlag, the system MUST send Logout with reason "MsgSeqNum too low" and disconnect.
 
-#### Scenario: Secuencia baja sin PossDup
-- **WHEN** se espera secuencia 10 y llega un mensaje con secuencia 5 sin PossDupFlag
-- **THEN** se envía Logout con razón "MsgSeqNum too low" y se desconecta
+#### Scenario: Low sequence without PossDup
+- **WHEN** sequence 10 is expected and a message with sequence 5 arrives without PossDupFlag
+- **THEN** Logout is sent with reason "MsgSeqNum too low" and the connection is closed
 
-### Requirement: Duplicados
+### Requirement: Duplicates
 
-Si un mensaje llega con número de secuencia menor al esperado y PossDupFlag="Y", el sistema MUST ignorarlo silenciosamente.
+If a message arrives with a sequence number less than expected and PossDupFlag="Y", the system MUST silently ignore it.
 
-#### Scenario: Duplicado con PossDupFlag
-- **WHEN** se espera secuencia 10 y llega un mensaje con secuencia 5 y PossDupFlag="Y"
-- **THEN** se ignora el mensaje sin error
+#### Scenario: Duplicate with PossDupFlag
+- **WHEN** sequence 10 is expected and a message with sequence 5 and PossDupFlag="Y" arrives
+- **THEN** the message is ignored without error
 
 ### Requirement: Reset on logon
 
-Si `reset_on_logon: true`, el sistema MUST enviar ResetSeqNumFlag en el Logon para resetear ambos contadores al inicio de la sesión.
+If `reset_on_logon: true`, the system MUST send ResetSeqNumFlag in the Logon to reset both counters at session start.
 
-#### Scenario: Reset habilitado
-- **WHEN** se conecta con `reset_on_logon: true`
-- **THEN** el Logon incluye ResetSeqNumFlag y ambos contadores se resetean
+#### Scenario: Reset enabled
+- **WHEN** connecting with `reset_on_logon: true`
+- **THEN** the Logon includes ResetSeqNumFlag and both counters are reset
 
-### Requirement: Heartbeat saliente
+### Requirement: Outgoing heartbeat
 
-El sistema MUST enviar un Heartbeat automáticamente cuando no se ha enviado ningún mensaje durante `heart_bt_int` segundos. El timer se resetea con cada mensaje saliente.
+The system MUST automatically send a Heartbeat when no message has been sent for `heart_bt_int` seconds. The timer resets with each outgoing message.
 
-#### Scenario: Timeout de heartbeat saliente
-- **WHEN** no se envía ningún mensaje durante `heart_bt_int` segundos
-- **THEN** se envía un Heartbeat automáticamente
+#### Scenario: Outgoing heartbeat timeout
+- **WHEN** no message is sent for `heart_bt_int` seconds
+- **THEN** a Heartbeat is sent automatically
 
-#### Scenario: Reset del timer por mensaje saliente
-- **WHEN** se envía un mensaje de aplicación
-- **THEN** el timer de heartbeat saliente se resetea
+#### Scenario: Timer reset by outgoing message
+- **WHEN** an application message is sent
+- **THEN** the outgoing heartbeat timer is reset
 
-### Requirement: Monitoreo de heartbeat entrante
+### Requirement: Incoming heartbeat monitoring
 
-El sistema MUST monitorear la recepción de mensajes con una tolerancia de 1.2x el intervalo de heartbeat.
+The system MUST monitor message reception with a tolerance of 1.2x the heartbeat interval.
 
-- **Primer timeout**: enviar TestRequest y esperar respuesta
-- **Segundo timeout** (sin respuesta al TestRequest): enviar Logout con razón "Data not received" y desconectar
+- **First timeout**: send TestRequest and await response
+- **Second timeout** (no response to TestRequest): send Logout with reason "Data not received" and disconnect
 
-El timer se resetea con cualquier mensaje entrante.
+The timer resets with any incoming message.
 
-#### Scenario: Primer timeout sin datos
-- **WHEN** no se recibe ningún mensaje en 1.2x `heart_bt_int` segundos
-- **THEN** se envía un TestRequest
+#### Scenario: First timeout without data
+- **WHEN** no message is received within 1.2x `heart_bt_int` seconds
+- **THEN** a TestRequest is sent
 
-#### Scenario: Segundo timeout sin respuesta
-- **WHEN** no se recibe respuesta al TestRequest en 1.2x `heart_bt_int` segundos
-- **THEN** se envía Logout con razón "Data not received" y se desconecta
+#### Scenario: Second timeout without response
+- **WHEN** no response to the TestRequest is received within 1.2x `heart_bt_int` seconds
+- **THEN** Logout is sent with reason "Data not received" and the connection is closed
 
-### Requirement: Reconexión automática
+### Requirement: Automatic reconnection
 
-El sistema MUST soportar reconexión automática via el supervisor OTP (DynamicSupervisor con estrategia `:one_for_one`). Los workers de sesión son `:transient` (solo reiniciados ante terminación anormal).
+The system MUST support automatic reconnection via the OTP supervisor (DynamicSupervisor with `:one_for_one` strategy). Session workers are `:transient` (only restarted on abnormal termination).
 
-#### Scenario: Desconexión anormal
-- **WHEN** un SessionWorker termina de forma anormal
-- **THEN** el supervisor lo reinicia automáticamente
+#### Scenario: Abnormal disconnection
+- **WHEN** a SessionWorker terminates abnormally
+- **THEN** the supervisor restarts it automatically
 
-#### Scenario: Desconexión normal
-- **WHEN** un SessionWorker termina normalmente (ej: stop_session)
-- **THEN** no se reinicia
+#### Scenario: Normal disconnection
+- **WHEN** a SessionWorker terminates normally (e.g.: stop_session)
+- **THEN** it is not restarted
 
-### Requirement: Intervalo de reconexión
+### Requirement: Reconnection interval
 
-Antes de reconectar, el sistema MUST esperar `reconnect_interval` segundos (default: 15) para evitar saturar al servidor.
+Before reconnecting, the system MUST wait `reconnect_interval` seconds (default: 15) to avoid overwhelming the server.
 
-#### Scenario: Espera antes de reconectar
-- **WHEN** un SessionWorker se reinicia tras desconexión anormal
-- **THEN** espera `reconnect_interval` segundos antes de intentar la reconexión
+#### Scenario: Wait before reconnecting
+- **WHEN** a SessionWorker restarts after abnormal disconnection
+- **THEN** it waits `reconnect_interval` seconds before attempting reconnection
 
-### Requirement: Validación de SendingTime
+### Requirement: SendingTime validation
 
-Si `validate_sending_time: true`, el sistema MUST verificar que el SendingTime (tag 52) de cada mensaje entrante no difiera del tiempo actual en más de `sending_time_tolerance` segundos (default: 120). Si excede la tolerancia, MUST enviar Reject y Logout.
+If `validate_sending_time: true`, the system MUST verify that the SendingTime (tag 52) of each incoming message does not differ from the current time by more than `sending_time_tolerance` seconds (default: 120). If it exceeds the tolerance, it MUST send Reject and Logout.
 
-#### Scenario: SendingTime dentro de tolerancia
-- **WHEN** se recibe un mensaje con SendingTime dentro de `sending_time_tolerance`
-- **THEN** se procesa normalmente
+#### Scenario: SendingTime within tolerance
+- **WHEN** a message with SendingTime within `sending_time_tolerance` is received
+- **THEN** it is processed normally
 
-#### Scenario: SendingTime fuera de tolerancia
-- **WHEN** se recibe un mensaje con SendingTime que difiere más de `sending_time_tolerance` segundos
-- **THEN** se envía Reject y Logout
+#### Scenario: SendingTime outside tolerance
+- **WHEN** a message with SendingTime differing by more than `sending_time_tolerance` seconds is received
+- **THEN** Reject and Logout are sent
 
-#### Scenario: Validación deshabilitada
+#### Scenario: Validation disabled
 - **WHEN** `validate_sending_time: false`
-- **THEN** no se verifica el SendingTime
+- **THEN** SendingTime is not verified
 
-### Requirement: Validación de CompID
+### Requirement: CompID validation
 
-El sistema MUST verificar que SenderCompID y TargetCompID de cada mensaje coincidan con los valores configurados (invertidos). Si no coinciden en un mensaje de aplicación, MUST enviar Reject con razón "CompID problem" y desconectar.
+The system MUST verify that SenderCompID and TargetCompID of each message match the configured values (reversed). If they do not match on an application message, it MUST send Reject with reason "CompID problem" and disconnect.
 
-#### Scenario: CompID correcto
-- **WHEN** se recibe un mensaje con SenderCompID y TargetCompID esperados
-- **THEN** se procesa normalmente
+#### Scenario: Correct CompID
+- **WHEN** a message with expected SenderCompID and TargetCompID is received
+- **THEN** it is processed normally
 
-#### Scenario: CompID incorrecto
-- **WHEN** se recibe un mensaje de aplicación con CompID que no coincide
-- **THEN** se envía Reject con razón "CompID problem" y se desconecta
+#### Scenario: Incorrect CompID
+- **WHEN** an application message with non-matching CompID is received
+- **THEN** Reject is sent with reason "CompID problem" and the connection is closed
 
-### Requirement: Validación de PossDup
+### Requirement: PossDup validation
 
-Para mensajes con PossDupFlag="Y", el sistema MUST verificar que:
+For messages with PossDupFlag="Y", the system MUST verify that:
 
-- OrigSendingTime (tag 122) esté presente
+- OrigSendingTime (tag 122) is present
 - OrigSendingTime <= SendingTime
 
-Si falla, MUST enviar Reject.
+If it fails, it MUST send Reject.
 
-#### Scenario: PossDup válido
-- **WHEN** se recibe un mensaje con PossDupFlag="Y", OrigSendingTime presente y <= SendingTime
-- **THEN** se procesa normalmente
+#### Scenario: Valid PossDup
+- **WHEN** a message with PossDupFlag="Y", OrigSendingTime present and <= SendingTime is received
+- **THEN** it is processed normally
 
-#### Scenario: PossDup sin OrigSendingTime
-- **WHEN** se recibe un mensaje con PossDupFlag="Y" sin OrigSendingTime
-- **THEN** se envía Reject
+#### Scenario: PossDup without OrigSendingTime
+- **WHEN** a message with PossDupFlag="Y" without OrigSendingTime is received
+- **THEN** Reject is sent
 
 #### Scenario: OrigSendingTime > SendingTime
-- **WHEN** se recibe un mensaje con PossDupFlag="Y" y OrigSendingTime > SendingTime
-- **THEN** se envía Reject
+- **WHEN** a message with PossDupFlag="Y" and OrigSendingTime > SendingTime is received
+- **THEN** Reject is sent
 
-### Requirement: Behaviour extensible
+### Requirement: Extensible behaviour
 
-El sistema MUST exponer un behaviour `SessionHandler` con estos callbacks:
+The system MUST expose a `SessionHandler` behaviour with these callbacks:
 
-- `on_logon(session_name, env)` — sesión establecida
-- `on_logout(session_name, env)` — sesión terminada
-- `on_session_message(session_name, msg_type, msg, env)` — mensaje de protocolo recibido
-- `on_app_message(session_name, msg_type, msg, env)` — mensaje de aplicación recibido
+- `on_logon(session_name, env)` — session established
+- `on_logout(session_name, env)` — session terminated
+- `on_session_message(session_name, msg_type, msg, env)` — protocol message received
+- `on_app_message(session_name, msg_type, msg, env)` — application message received
 
-Todos los callbacks reciben el `env` custom definido en la configuración.
+All callbacks receive the custom `env` defined in the configuration.
 
-#### Scenario: Callback de logon
-- **WHEN** la sesión se establece exitosamente
-- **THEN** se invoca `on_logon(session_name, env)`
+#### Scenario: Logon callback
+- **WHEN** the session is established successfully
+- **THEN** `on_logon(session_name, env)` is invoked
 
-#### Scenario: Callback de mensaje de aplicación
-- **WHEN** se recibe un mensaje de aplicación (ej: Execution Report)
-- **THEN** se invoca `on_app_message(session_name, msg_type, msg, env)`
+#### Scenario: Application message callback
+- **WHEN** an application message is received (e.g.: Execution Report)
+- **THEN** `on_app_message(session_name, msg_type, msg, env)` is invoked
 
-### Requirement: Opciones configurables
+### Requirement: Configurable options
 
-Cada sesión MUST ser configurable independientemente con:
+Each session MUST be independently configurable with:
 
-| Opción | Default | Descripción |
+| Option | Default | Description |
 |--------|---------|-------------|
-| `hostname` | "localhost" | Host del servidor |
-| `port` | 9876 | Puerto |
-| `transport_mod` | `:gen_tcp` | `:gen_tcp` o `:ssl` |
-| `heart_bt_int` | 60 | Intervalo de heartbeat (segundos) |
-| `reset_on_logon` | true | Resetear secuencia al conectar |
-| `username` / `password` | nil | Credenciales opcionales |
-| `validate_incoming_message` | true | Validar checksum/body length |
-| `validate_sending_time` | true | Validar SendingTime |
-| `sending_time_tolerance` | 120 | Tolerancia en segundos |
-| `reconnect_interval` | 15 | Segundos entre reconexiones |
-| `log_incoming_msg` | true | Loguear mensajes entrantes |
-| `log_outgoing_msg` | true | Loguear mensajes salientes |
-| `time_service` | nil | nil (UTC now), DateTime fijo, o {m, f, a} |
-| `max_output_buf_count` | 1000 | Tamaño del buffer de mensajes enviados |
-| `env` | %{} | Mapa custom pasado a callbacks |
+| `hostname` | "localhost" | Server host |
+| `port` | 9876 | Port |
+| `transport_mod` | `:gen_tcp` | `:gen_tcp` or `:ssl` |
+| `heart_bt_int` | 60 | Heartbeat interval (seconds) |
+| `reset_on_logon` | true | Reset sequence on connect |
+| `username` / `password` | nil | Optional credentials |
+| `validate_incoming_message` | true | Validate checksum/body length |
+| `validate_sending_time` | true | Validate SendingTime |
+| `sending_time_tolerance` | 120 | Tolerance in seconds |
+| `reconnect_interval` | 15 | Seconds between reconnections |
+| `log_incoming_msg` | true | Log incoming messages |
+| `log_outgoing_msg` | true | Log outgoing messages |
+| `time_service` | nil | nil (UTC now), fixed DateTime, or {m, f, a} |
+| `max_output_buf_count` | 1000 | Size of sent messages buffer |
+| `env` | %{} | Custom map passed to callbacks |
 
-#### Scenario: Configuración por defecto
-- **WHEN** se inicia una sesión sin opciones
-- **THEN** se usan todos los valores por defecto de la tabla
+#### Scenario: Default configuration
+- **WHEN** a session is started without options
+- **THEN** all default values from the table are used
 
-#### Scenario: Override parcial
-- **WHEN** se inicia una sesión con `heart_bt_int: 30`
-- **THEN** se usa 30 para heartbeat y los defaults para el resto
+#### Scenario: Partial override
+- **WHEN** a session is started with `heart_bt_int: 30`
+- **THEN** 30 is used for heartbeat and defaults for the rest

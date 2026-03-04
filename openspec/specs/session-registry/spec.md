@@ -1,148 +1,148 @@
-# Registry de Sesiones
+# Session Registry
 
 ## Purpose
 
-Sistema de tracking de estado de sesiones FIX con soporte para reconexión coordinada.
+FIX session state tracking system with support for coordinated reconnection.
 
 ## Requirements
 
-### Requirement: Behaviour SessionRegistry
+### Requirement: SessionRegistry behaviour
 
-MUST existir un behaviour `SessionRegistry` con estos callbacks:
+There MUST exist a `SessionRegistry` behaviour with these callbacks:
 
-**API pública:**
-- `get_session_status(session_name)` — retorna el estado actual de la sesión
-- `start_session(session_name, config)` — registra e inicia una sesión FIX
-- `stop_session(session_name)` — detiene y desregistra una sesión
+**Public API:**
+- `get_session_status(session_name)` — returns the current session state
+- `start_session(session_name, config)` — registers and starts a FIX session
+- `stop_session(session_name)` — stops and deregisters a session
 
-**API interna (llamada desde workers de sesión):**
-- `session_on_init(session_name)` — consulta antes de conectar, retorna `:ok`, `:wait_to_reconnect`, o `{:error, reason}`
-- `session_update_status(session_name, status)` — actualiza el estado en tiempo real
+**Internal API (called from session workers):**
+- `session_on_init(session_name)` — queries before connecting, returns `:ok`, `:wait_to_reconnect`, or `{:error, reason}`
+- `session_update_status(session_name, status)` — updates the state in real time
 
-#### Scenario: Inicio y consulta de estado
-- **WHEN** se invoca `start_session("sim", config)` y luego `get_session_status("sim")`
-- **THEN** se retorna el estado actual de la sesión
+#### Scenario: Start and query state
+- **WHEN** `start_session("sim", config)` is invoked and then `get_session_status("sim")`
+- **THEN** the current session state is returned
 
-### Requirement: Implementación extensible
+### Requirement: Extensible implementation
 
-El sistema MUST permitir implementaciones custom del registry (ej: basadas en distributed ETS, Redis, etc.) mediante el behaviour.
+The system MUST allow custom registry implementations (e.g.: based on distributed ETS, Redis, etc.) via the behaviour.
 
-#### Scenario: Registry custom
-- **WHEN** se implementa un módulo que cumple el behaviour `SessionRegistry`
-- **THEN** se puede usar como registry configurando `:session_registry`
+#### Scenario: Custom registry
+- **WHEN** a module that fulfills the `SessionRegistry` behaviour is implemented
+- **THEN** it can be used as a registry by configuring `:session_registry`
 
-### Requirement: Estados tracked
+### Requirement: Tracked states
 
-El registry MUST rastrear estos estados:
+The registry MUST track these states:
 
-| Estado | Significado |
-|--------|-------------|
-| `:connecting` | Sesión registrada, intentando logon |
-| `:connected` | Logon exitoso, recibiendo datos |
-| `:disconnecting` | Cierre en progreso |
-| `:disconnected` | Desconectada normalmente, sin reconexión |
-| `:reconnecting` | Conexión perdida, pendiente de reconexión |
+| State | Meaning |
+|-------|---------|
+| `:connecting` | Session registered, attempting logon |
+| `:connected` | Logon successful, receiving data |
+| `:disconnecting` | Close in progress |
+| `:disconnected` | Disconnected normally, no reconnection |
+| `:reconnecting` | Connection lost, pending reconnection |
 
-#### Scenario: Transición de estados
-- **WHEN** se inicia una sesión y completa el logon
-- **THEN** el estado transiciona de `:connecting` a `:connected`
+#### Scenario: State transition
+- **WHEN** a session is started and completes the logon
+- **THEN** the state transitions from `:connecting` to `:connected`
 
-### Requirement: Transiciones de estado
+### Requirement: State transitions
 
-Las transiciones MUST seguir este flujo:
+Transitions MUST follow this flow:
 
 ```
 start_session() → :connecting
                       ↓
-              logon exitoso → :connected
-                                  ↓
-                      cierre graceful → :disconnecting → :disconnected
-                      error/cierre     → :reconnecting
+              successful logon → :connected
+                                     ↓
+                      graceful close   → :disconnecting → :disconnected
+                      error/close      → :reconnecting
 ```
 
-El estado default para sesiones no registradas MUST ser `:disconnected`.
+The default state for unregistered sessions MUST be `:disconnected`.
 
-#### Scenario: Sesión no registrada
-- **WHEN** se consulta el estado de una sesión no registrada
-- **THEN** se retorna `:disconnected`
+#### Scenario: Unregistered session
+- **WHEN** the state of an unregistered session is queried
+- **THEN** `:disconnected` is returned
 
-#### Scenario: Error de conexión
-- **WHEN** una sesión conectada pierde la conexión por error
-- **THEN** el estado transiciona a `:reconnecting`
+#### Scenario: Connection error
+- **WHEN** a connected session loses its connection due to an error
+- **THEN** the state transitions to `:reconnecting`
 
-### Requirement: Storage en ETS
+### Requirement: ETS storage
 
-La implementación por defecto MUST usar una tabla ETS pública y nombrada (`:ex_fix_registry`) para almacenar pares `{session_name, status}`.
+The default implementation MUST use a public, named ETS table (`:ex_fix_registry`) to store `{session_name, status}` pairs.
 
-#### Scenario: Datos en ETS
-- **WHEN** se inicia una sesión con el registry por defecto
-- **THEN** el estado se almacena en la tabla ETS `:ex_fix_registry`
+#### Scenario: Data in ETS
+- **WHEN** a session is started with the default registry
+- **THEN** the state is stored in the `:ex_fix_registry` ETS table
 
-### Requirement: Monitoreo de procesos
+### Requirement: Process monitoring
 
-La implementación por defecto MUST monitorear los procesos de SessionWorker y actualizar estados automáticamente:
+The default implementation MUST monitor SessionWorker processes and update states automatically:
 
-- Terminación normal (`:normal`) → `:disconnected`, eliminar del registro
-- Terminación anormal (`:econnrefused`, `:closed`, etc.) → `:reconnecting`
+- Normal termination (`:normal`) → `:disconnected`, remove from registry
+- Abnormal termination (`:econnrefused`, `:closed`, etc.) → `:reconnecting`
 
-#### Scenario: Terminación normal del worker
-- **WHEN** un SessionWorker termina con razón `:normal`
-- **THEN** el estado cambia a `:disconnected` y se elimina del registro
+#### Scenario: Normal worker termination
+- **WHEN** a SessionWorker terminates with reason `:normal`
+- **THEN** the state changes to `:disconnected` and it is removed from the registry
 
-#### Scenario: Terminación anormal del worker
-- **WHEN** un SessionWorker termina con razón `:econnrefused`
-- **THEN** el estado cambia a `:reconnecting`
+#### Scenario: Abnormal worker termination
+- **WHEN** a SessionWorker terminates with reason `:econnrefused`
+- **THEN** the state changes to `:reconnecting`
 
-### Requirement: Control de inicio via session_on_init
+### Requirement: Startup control via session_on_init
 
-Cuando un SessionWorker inicia, MUST consultar al registry via `session_on_init/1`:
+When a SessionWorker starts, it MUST query the registry via `session_on_init/1`:
 
-- Si el estado es `:connecting` → retornar `:ok` (inicio inmediato)
-- Si el estado es `:disconnecting` → retornar `{:error, :disconnected}` (rechazar)
-- En cualquier otro estado → retornar `:wait_to_reconnect` (esperar `reconnect_interval`)
+- If the state is `:connecting` → return `:ok` (immediate start)
+- If the state is `:disconnecting` → return `{:error, :disconnected}` (reject)
+- In any other state → return `:wait_to_reconnect` (wait for `reconnect_interval`)
 
-Esto MUST prevenir intentos de reconexión concurrentes o prematuros.
+This MUST prevent concurrent or premature reconnection attempts.
 
-#### Scenario: Inicio inmediato
-- **WHEN** el worker consulta `session_on_init` y el estado es `:connecting`
-- **THEN** se retorna `:ok`
+#### Scenario: Immediate start
+- **WHEN** the worker queries `session_on_init` and the state is `:connecting`
+- **THEN** `:ok` is returned
 
-#### Scenario: Reconexión con espera
-- **WHEN** el worker consulta `session_on_init` y el estado es `:reconnecting`
-- **THEN** se retorna `:wait_to_reconnect`
+#### Scenario: Reconnection with wait
+- **WHEN** the worker queries `session_on_init` and the state is `:reconnecting`
+- **THEN** `:wait_to_reconnect` is returned
 
-#### Scenario: Inicio rechazado
-- **WHEN** el worker consulta `session_on_init` y el estado es `:disconnecting`
-- **THEN** se retorna `{:error, :disconnected}`
+#### Scenario: Rejected start
+- **WHEN** the worker queries `session_on_init` and the state is `:disconnecting`
+- **THEN** `{:error, :disconnected}` is returned
 
 ### Requirement: DynamicSupervisor
 
-El sistema MUST usar un `DynamicSupervisor` (SessionSup) con estrategia `:one_for_one` para supervisar los SessionWorkers. Los workers MUST ser `:transient` (solo reiniciados ante terminación anormal).
+The system MUST use a `DynamicSupervisor` (SessionSup) with `:one_for_one` strategy to supervise SessionWorkers. Workers MUST be `:transient` (only restarted on abnormal termination).
 
-#### Scenario: Supervisión de workers
-- **WHEN** se inicia una sesión
-- **THEN** el SessionWorker se agrega al DynamicSupervisor como child `:transient`
+#### Scenario: Worker supervision
+- **WHEN** a session is started
+- **THEN** the SessionWorker is added to the DynamicSupervisor as a `:transient` child
 
-### Requirement: Naming de procesos
+### Requirement: Process naming
 
-Cada SessionWorker MUST registrarse como proceso nombrado con el formato `:ex_fix_session_{name}` para permitir lookups directos.
+Each SessionWorker MUST register as a named process with the format `:ex_fix_session_{name}` to allow direct lookups.
 
-#### Scenario: Proceso nombrado
-- **WHEN** se inicia una sesión con nombre "sim"
-- **THEN** el proceso se registra como `:ex_fix_session_sim`
+#### Scenario: Named process
+- **WHEN** a session with name "sim" is started
+- **THEN** the process registers as `:ex_fix_session_sim`
 
-### Requirement: Cleanup en stop
+### Requirement: Cleanup on stop
 
-Al detener una sesión, el registry MUST:
+When stopping a session, the registry MUST:
 
-- Eliminar la entrada del almacenamiento
-- Detener el SessionWorker gracefully
-- Manejar el caso donde el worker ya no existe sin errores
+- Remove the entry from storage
+- Stop the SessionWorker gracefully
+- Handle the case where the worker no longer exists without errors
 
-#### Scenario: Stop de sesión activa
-- **WHEN** se invoca `stop_session("sim")` con una sesión activa
-- **THEN** se elimina del registro y se detiene el worker
+#### Scenario: Stop of active session
+- **WHEN** `stop_session("sim")` is invoked with an active session
+- **THEN** it is removed from the registry and the worker is stopped
 
-#### Scenario: Stop de sesión ya detenida
-- **WHEN** se invoca `stop_session("sim")` y el worker ya no existe
-- **THEN** se elimina del registro sin errores
+#### Scenario: Stop of already stopped session
+- **WHEN** `stop_session("sim")` is invoked and the worker no longer exists
+- **THEN** it is removed from the registry without errors

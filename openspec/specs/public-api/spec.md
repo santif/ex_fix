@@ -1,167 +1,167 @@
-# API Pública
+# Public API
 
 ## Purpose
 
-Interfaz de usuario del módulo `ExFix` — entry point para iniciar sesiones, enviar mensajes y detener sesiones FIX.
+User interface of the `ExFix` module — entry point for starting sessions, sending messages, and stopping FIX sessions.
 
 ## Requirements
 
-### Requirement: Firma de start_session_initiator
+### Requirement: start_session_initiator signature
 
-El sistema MUST exponer `ExFix.start_session_initiator/5` con la siguiente firma:
+The system MUST expose `ExFix.start_session_initiator/5` with the following signature:
 
 ```elixir
 start_session_initiator(session_name, sender_comp_id, target_comp_id, session_handler, opts \\ [])
 ```
 
-Donde:
+Where:
 
-| Parámetro | Tipo | Descripción |
+| Parameter | Type | Description |
 |-----------|------|-------------|
-| `session_name` | `String.t()` | Nombre único que identifica la sesión |
-| `sender_comp_id` | `String.t()` | CompID del iniciador (buy-side) |
-| `target_comp_id` | `String.t()` | CompID de la contraparte (sell-side) |
-| `session_handler` | módulo | Módulo que implementa el behaviour `SessionHandler` |
-| `opts` | keyword list | Opciones de configuración (ver spec `session-management`) |
+| `session_name` | `String.t()` | Unique name that identifies the session |
+| `sender_comp_id` | `String.t()` | CompID of the initiator (buy-side) |
+| `target_comp_id` | `String.t()` | CompID of the counterparty (sell-side) |
+| `session_handler` | module | Module that implements the `SessionHandler` behaviour |
+| `opts` | keyword list | Configuration options (see spec `session-management`) |
 
-#### Scenario: Inicio con parámetros mínimos
-- **WHEN** se invoca `start_session_initiator("sim", "BUY", "SELL", MyHandler)`
-- **THEN** se inicia una sesión con los valores por defecto para todas las opciones
+#### Scenario: Start with minimal parameters
+- **WHEN** `start_session_initiator("sim", "BUY", "SELL", MyHandler)` is invoked
+- **THEN** a session starts with default values for all options
 
-#### Scenario: Inicio con opciones custom
-- **WHEN** se invoca `start_session_initiator("sim", "BUY", "SELL", MyHandler, hostname: "remote", port: 5000)`
-- **THEN** se inicia una sesión usando las opciones proporcionadas y defaults para el resto
+#### Scenario: Start with custom options
+- **WHEN** `start_session_initiator("sim", "BUY", "SELL", MyHandler, hostname: "remote", port: 5000)` is invoked
+- **THEN** a session starts using the provided options and defaults for the rest
 
-### Requirement: Procesamiento de opciones
+### Requirement: Options processing
 
-La función MUST convertir la keyword list `opts` a un mapa, aplicando valores por defecto para todas las opciones no proporcionadas. Los valores por defecto están documentados en la spec `session-management` (sección Configuración).
+The function MUST convert the keyword list `opts` to a map, applying default values for all options not provided. Default values are documented in the spec `session-management` (Configuration section).
 
-#### Scenario: Opciones parciales se completan con defaults
-- **WHEN** se proporciona solo `hostname: "remote"` en opts
-- **THEN** las demás opciones (`port`, `heart_bt_int`, etc.) toman sus valores por defecto
+#### Scenario: Partial options are completed with defaults
+- **WHEN** only `hostname: "remote"` is provided in opts
+- **THEN** the remaining options (`port`, `heart_bt_int`, etc.) take their default values
 
-### Requirement: Construcción del SessionConfig
+### Requirement: SessionConfig construction
 
-La función MUST construir un struct `SessionConfig` con:
+The function MUST build a `SessionConfig` struct with:
 
-- `name` — el `session_name` proporcionado
-- `mode` — siempre `:initiator`
-- `sender_comp_id`, `target_comp_id`, `session_handler` — de los parámetros
-- Resto de campos — de las opciones procesadas
+- `name` — the provided `session_name`
+- `mode` — always `:initiator`
+- `sender_comp_id`, `target_comp_id`, `session_handler` — from the parameters
+- Remaining fields — from the processed options
 
-#### Scenario: Config resultante tiene campos correctos
-- **WHEN** se invoca `start_session_initiator("sim", "BUY", "SELL", MyHandler)`
-- **THEN** el SessionConfig tiene `name: "sim"`, `mode: :initiator`, `sender_comp_id: "BUY"`, `target_comp_id: "SELL"`, `session_handler: MyHandler`
+#### Scenario: Resulting config has correct fields
+- **WHEN** `start_session_initiator("sim", "BUY", "SELL", MyHandler)` is invoked
+- **THEN** the SessionConfig has `name: "sim"`, `mode: :initiator`, `sender_comp_id: "BUY"`, `target_comp_id: "SELL"`, `session_handler: MyHandler`
 
-### Requirement: Delegación al registry
+### Requirement: Delegation to registry
 
-La función MUST delegar el inicio de la sesión al `SessionRegistry` configurado, invocando `session_registry.start_session(session_name, config)`.
+The function MUST delegate session startup to the configured `SessionRegistry`, invoking `session_registry.start_session(session_name, config)`.
 
-El registry se determina en este orden de prioridad:
+The registry is determined in this priority order:
 
-1. `opts[:session_registry]` si está presente
-2. El registry por defecto configurado en `Application.compile_env(:ex_fix, :session_registry)`
-3. `ExFix.DefaultSessionRegistry` como fallback final
+1. `opts[:session_registry]` if present
+2. The default registry configured in `Application.compile_env(:ex_fix, :session_registry)`
+3. `ExFix.DefaultSessionRegistry` as final fallback
 
-#### Scenario: Registry por defecto
-- **WHEN** no se proporciona `session_registry` en opts
-- **THEN** se usa el registry configurado en la aplicación o `ExFix.DefaultSessionRegistry`
+#### Scenario: Default registry
+- **WHEN** `session_registry` is not provided in opts
+- **THEN** the application-configured registry or `ExFix.DefaultSessionRegistry` is used
 
-#### Scenario: Registry custom en opts
-- **WHEN** se proporciona `session_registry: MyRegistry` en opts
-- **THEN** se usa `MyRegistry` para iniciar la sesión
+#### Scenario: Custom registry in opts
+- **WHEN** `session_registry: MyRegistry` is provided in opts
+- **THEN** `MyRegistry` is used to start the session
 
-### Requirement: Solo modo iniciador
+### Requirement: Initiator mode only
 
-La API pública MUST soportar únicamente el modo `:initiator` (buy-side). No existe soporte para modo acceptor (sell-side).
+The public API MUST support only the `:initiator` mode (buy-side). There is no support for acceptor mode (sell-side).
 
-#### Scenario: Modo siempre initiator
-- **WHEN** se inicia cualquier sesión via la API pública
-- **THEN** el SessionConfig tiene `mode: :initiator`
+#### Scenario: Mode is always initiator
+- **WHEN** any session is started via the public API
+- **THEN** the SessionConfig has `mode: :initiator`
 
-### Requirement: Firma de send_message!
+### Requirement: send_message! signature
 
-El sistema MUST exponer `ExFix.send_message!/2` con la siguiente firma:
+The system MUST expose `ExFix.send_message!/2` with the following signature:
 
 ```elixir
 send_message!(out_message, session_name)
 ```
 
-| Parámetro | Tipo | Descripción |
+| Parameter | Type | Description |
 |-----------|------|-------------|
-| `out_message` | `OutMessage.t()` | Mensaje construido con `OutMessage.new/1` y `OutMessage.set_field/3` |
-| `session_name` | `Session.session_name()` | Nombre de la sesión destino |
+| `out_message` | `OutMessage.t()` | Message built with `OutMessage.new/1` and `OutMessage.set_field/3` |
+| `session_name` | `Session.session_name()` | Target session name |
 
-#### Scenario: Envío exitoso
-- **WHEN** se invoca `send_message!(msg, "sim")` con una sesión activa
-- **THEN** retorna `:ok` y el mensaje es encolado para envío
+#### Scenario: Successful send
+- **WHEN** `send_message!(msg, "sim")` is invoked with an active session
+- **THEN** it returns `:ok` and the message is queued for sending
 
-### Requirement: Resolución de sesión por nombre
+### Requirement: Session resolution by name
 
-La función MUST resolver la sesión por su nombre registrado y delegar al `SessionWorker` correspondiente via `GenServer.call`. Si la sesión no existe o no está activa, MUST propagar la excepción (comportamiento bang `!`).
+The function MUST resolve the session by its registered name and delegate to the corresponding `SessionWorker` via `GenServer.call`. If the session does not exist or is not active, it MUST propagate the exception (bang `!` behavior).
 
-#### Scenario: Sesión activa
-- **WHEN** se envía un mensaje a una sesión registrada y activa
-- **THEN** el mensaje se delega al SessionWorker correspondiente
+#### Scenario: Active session
+- **WHEN** a message is sent to a registered and active session
+- **THEN** the message is delegated to the corresponding SessionWorker
 
-#### Scenario: Sesión inexistente
-- **WHEN** se envía un mensaje a una sesión que no existe
-- **THEN** se lanza una excepción
+#### Scenario: Non-existent session
+- **WHEN** a message is sent to a session that does not exist
+- **THEN** an exception is raised
 
-### Requirement: Envío sincrónico
+### Requirement: Synchronous send
 
-`send_message!/2` MUST ser una operación sincrónica — retorna `:ok` cuando el mensaje fue encolado para envío, o lanza una excepción si falla. El caller puede usar esto para detectar sesiones caídas.
+`send_message!/2` MUST be a synchronous operation — it returns `:ok` when the message has been queued for sending, or raises an exception if it fails. The caller can use this to detect crashed sessions.
 
-#### Scenario: Caller recibe confirmación
-- **WHEN** se invoca `send_message!/2` y el worker procesa la petición
-- **THEN** la función retorna `:ok` de forma sincrónica
+#### Scenario: Caller receives confirmation
+- **WHEN** `send_message!/2` is invoked and the worker processes the request
+- **THEN** the function returns `:ok` synchronously
 
-### Requirement: Firma de stop_session
+### Requirement: stop_session signature
 
-El sistema MUST exponer `ExFix.stop_session/2` con la siguiente firma:
+The system MUST expose `ExFix.stop_session/2` with the following signature:
 
 ```elixir
 stop_session(session_name, registry \\ nil)
 ```
 
-| Parámetro | Tipo | Descripción |
+| Parameter | Type | Description |
 |-----------|------|-------------|
-| `session_name` | `Session.session_name()` | Nombre de la sesión a detener |
-| `registry` | módulo o nil | Registry custom; nil usa el por defecto |
+| `session_name` | `Session.session_name()` | Name of the session to stop |
+| `registry` | module or nil | Custom registry; nil uses the default |
 
-#### Scenario: Stop con registry por defecto
-- **WHEN** se invoca `stop_session("sim")`
-- **THEN** se detiene la sesión usando el registry por defecto
+#### Scenario: Stop with default registry
+- **WHEN** `stop_session("sim")` is invoked
+- **THEN** the session is stopped using the default registry
 
-#### Scenario: Stop con registry custom
-- **WHEN** se invoca `stop_session("sim", MyRegistry)`
-- **THEN** se detiene la sesión usando `MyRegistry`
+#### Scenario: Stop with custom registry
+- **WHEN** `stop_session("sim", MyRegistry)` is invoked
+- **THEN** the session is stopped using `MyRegistry`
 
-### Requirement: Delegación de stop al registry
+### Requirement: Stop delegation to registry
 
-La función MUST delegar la detención al `SessionRegistry`:
+The function MUST delegate stopping to the `SessionRegistry`:
 
-- Si `registry` es nil, usa el registry por defecto (misma lógica que `start_session_initiator`)
-- Si se proporciona un módulo, lo usa directamente
+- If `registry` is nil, it uses the default registry (same logic as `start_session_initiator`)
+- If a module is provided, it uses it directly
 
-Invoca `session_registry.stop_session(session_name)`.
+It invokes `session_registry.stop_session(session_name)`.
 
-#### Scenario: Delegación correcta
-- **WHEN** se invoca `stop_session("sim")`
-- **THEN** se llama a `registry.stop_session("sim")` en el registry correspondiente
+#### Scenario: Correct delegation
+- **WHEN** `stop_session("sim")` is invoked
+- **THEN** `registry.stop_session("sim")` is called on the corresponding registry
 
-### Requirement: Dictionary por defecto configurable
+### Requirement: Configurable default dictionary
 
-El módulo MUST leer el dictionary por defecto desde `Application.compile_env(:ex_fix, :default_dictionary)`, con fallback a `ExFix.DefaultDictionary`. Esto se resuelve en tiempo de compilación.
+The module MUST read the default dictionary from `Application.compile_env(:ex_fix, :default_dictionary)`, with fallback to `ExFix.DefaultDictionary`. This is resolved at compile time.
 
-#### Scenario: Dictionary no configurado
-- **WHEN** no se configura `:default_dictionary` en la aplicación
-- **THEN** se usa `ExFix.DefaultDictionary`
+#### Scenario: Dictionary not configured
+- **WHEN** `:default_dictionary` is not configured in the application
+- **THEN** `ExFix.DefaultDictionary` is used
 
-### Requirement: Registry por defecto configurable
+### Requirement: Configurable default registry
 
-El módulo MUST leer el registry por defecto desde `Application.compile_env(:ex_fix, :session_registry)`, con fallback a `ExFix.DefaultSessionRegistry`. Esto se resuelve en tiempo de compilación.
+The module MUST read the default registry from `Application.compile_env(:ex_fix, :session_registry)`, with fallback to `ExFix.DefaultSessionRegistry`. This is resolved at compile time.
 
-#### Scenario: Registry no configurado
-- **WHEN** no se configura `:session_registry` en la aplicación
-- **THEN** se usa `ExFix.DefaultSessionRegistry`
+#### Scenario: Registry not configured
+- **WHEN** `:session_registry` is not configured in the application
+- **THEN** `ExFix.DefaultSessionRegistry` is used

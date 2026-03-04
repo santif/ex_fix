@@ -1,49 +1,49 @@
 schema: spec-driven
 
 context: |
-  ExFix: implementación en Elixir del protocolo FIX Session (FIXT.1.1).
-  Iniciador de sesión buy-side para sistemas de trading financiero.
+  ExFix: Elixir implementation of the FIX Session protocol (FIXT.1.1).
+  Buy-side session initiator for financial trading systems.
 
-  Stack técnico:
+  Tech stack:
   - Elixir 1.18+, OTP (GenServer, DynamicSupervisor, ETS)
-  - Cero dependencias en runtime (solo primitivas Erlang/OTP)
-  - Herramientas dev: ExDoc, Dialyxir, Credo, Benchfella
+  - Zero runtime dependencies (only Erlang/OTP primitives)
+  - Dev tools: ExDoc, Dialyxir, Credo, Benchfella
 
-  Arquitectura:
-  - Árbol de supervisión OTP con un GenServer por sesión
-  - Puntos de extensión via behaviours (SessionHandler, Dictionary, SessionRegistry)
-  - Parsing de mensajes en dos fases (extracción de metadata → parsing completo)
-  - Protocolo binario: pares tag=value con delimitadores SOH
+  Architecture:
+  - OTP supervision tree with one GenServer per session
+  - Extension points via behaviours (SessionHandler, Dictionary, SessionRegistry)
+  - Two-phase message parsing (metadata extraction → complete parsing)
+  - Binary protocol: tag=value pairs with SOH delimiters
 
-  Convenciones:
-  - Todas las funciones públicas tienen @doc, @spec y @moduledoc
-  - Structs inmutables con enforce_keys para campos requeridos
-  - Componentes pluggables via behaviours (no protocols)
-  - Paths críticos de performance usan @compile {:inline, ...}
-  - Tests usan mock transports y registries (sin I/O de red)
+  Conventions:
+  - All public functions have @doc, @spec, and @moduledoc
+  - Immutable structs with enforce_keys for required fields
+  - Pluggable components via behaviours (not protocols)
+  - Performance-critical paths use @compile {:inline, ...}
+  - Tests use mock transports and registries (no network I/O)
 
-  Dominio:
-  - Mensajes FIX: Logon, Heartbeat, TestRequest, Reject, SequenceReset, Logout
-  - Gestión de sesión: números de secuencia, monitoreo de heartbeat, reconexión
-  - Validación de mensajes: checksum, body length, tolerancia de sending time
+  Domain:
+  - FIX messages: Logon, Heartbeat, TestRequest, Reject, SequenceReset, Logout
+  - Session management: sequence numbers, heartbeat monitoring, reconnection
+  - Message validation: checksum, body length, sending time tolerance
 
-  Idioma del código y commits: inglés
-  Idioma de artefactos OpenSpec: español
+  Code and commit language: English
+  OpenSpec artifact language: English
 
 rules:
   proposal:
-    - Considerar compatibilidad hacia atrás — es una librería publicada en hex.pm
-    - Identificar impacto en behaviours existentes (SessionHandler, Dictionary, SessionRegistry)
-    - Notar si el cambio afecta la conformidad con el protocolo FIX
+    - Consider backwards compatibility — this is a library published on hex.pm
+    - Identify impact on existing behaviours (SessionHandler, Dictionary, SessionRegistry)
+    - Note if the change affects FIX protocol conformance
   specs:
-    - Usar formato Dado/Cuando/Entonces para escenarios
-    - Incluir casos de error y edge cases (mensajes malformados, gaps de secuencia, desconexiones)
-    - Referenciar la spec del protocolo FIX donde corresponda
+    - Use Given/When/Then format for scenarios
+    - Include error cases and edge cases (malformed messages, sequence gaps, disconnections)
+    - Reference the FIX protocol spec where applicable
   design:
-    - Preferir extender behaviours existentes antes que crear nuevos
-    - Documentar interacciones entre procesos OTP con diagramas
-    - Considerar implicaciones de performance (el parsing está en el hot path)
+    - Prefer extending existing behaviours over creating new ones
+    - Document OTP process interactions with diagrams
+    - Consider performance implications (parsing is in the hot path)
   tasks:
-    - Cada tarea debe ser completable en menos de 2 horas
-    - Incluir tareas de test junto a las de implementación
-    - Especificar qué módulos/archivos se ven afectados
+    - Each task should be completable in less than 2 hours
+    - Include test tasks alongside implementation tasks
+    - Specify which modules/files are affected

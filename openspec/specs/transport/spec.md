@@ -1,125 +1,125 @@
-# Transporte
+# Transport
 
 ## Purpose
 
-Capa de abstracción de transporte para comunicación de red con contrapartes FIX.
+Transport abstraction layer for network communication with FIX counterparties.
 
 ## Requirements
 
-### Requirement: Contrato duck-typed
+### Requirement: Duck-typed contract
 
-El sistema MUST aceptar cualquier módulo de transporte que implemente tres funciones:
+The system MUST accept any transport module that implements three functions:
 
-- `connect(host, port, options)` — retorna `{:ok, client}` o `{:error, reason}`
-- `send(client, data)` — envía datos binarios por la conexión
-- `close(client)` — cierra la conexión
+- `connect(host, port, options)` — returns `{:ok, client}` or `{:error, reason}`
+- `send(client, data)` — sends binary data over the connection
+- `close(client)` — closes the connection
 
-No existe un behaviour formal; el contrato se cumple por duck typing. Los módulos `:gen_tcp` y `:ssl` de Erlang/OTP cumplen este contrato nativamente.
+There is no formal behaviour; the contract is fulfilled by duck typing. The `:gen_tcp` and `:ssl` Erlang/OTP modules fulfill this contract natively.
 
-#### Scenario: Módulo compatible
-- **WHEN** se configura un módulo que implementa `connect/3`, `send/2` y `close/1`
-- **THEN** el sistema lo acepta como transporte válido
+#### Scenario: Compatible module
+- **WHEN** a module that implements `connect/3`, `send/2`, and `close/1` is configured
+- **THEN** the system accepts it as a valid transport
 
-### Requirement: Transporte configurable por sesión
+### Requirement: Per-session configurable transport
 
-Cada sesión MUST poder configurar su transporte independientemente mediante:
+Each session MUST be able to configure its transport independently via:
 
-- `transport_mod` — módulo de transporte (default: `:gen_tcp`)
-- `transport_options` — opciones adicionales pasadas a `connect/3`
+- `transport_mod` — transport module (default: `:gen_tcp`)
+- `transport_options` — additional options passed to `connect/3`
 
-El sistema MUST anteponer `[mode: :binary]` a las opciones del usuario antes de conectar.
+The system MUST prepend `[mode: :binary]` to user options before connecting.
 
-#### Scenario: Opciones de transporte custom
-- **WHEN** se configura `transport_options: [verify: :verify_peer]`
-- **THEN** se pasa `[mode: :binary, verify: :verify_peer]` a `connect/3`
+#### Scenario: Custom transport options
+- **WHEN** `transport_options: [verify: :verify_peer]` is configured
+- **THEN** `[mode: :binary, verify: :verify_peer]` is passed to `connect/3`
 
-### Requirement: Soporte TCP
+### Requirement: TCP support
 
-El sistema MUST soportar conexiones TCP planas via `:gen_tcp` como transporte por defecto.
+The system MUST support plain TCP connections via `:gen_tcp` as the default transport.
 
-#### Scenario: Conexión TCP por defecto
-- **WHEN** no se especifica `transport_mod`
-- **THEN** se usa `:gen_tcp` para la conexión
+#### Scenario: Default TCP connection
+- **WHEN** `transport_mod` is not specified
+- **THEN** `:gen_tcp` is used for the connection
 
-### Requirement: Soporte SSL/TLS
+### Requirement: SSL/TLS support
 
-El sistema MUST soportar conexiones SSL/TLS via `:ssl`, aceptando todas las opciones estándar de `:ssl.connect/3` en `transport_options` (certificados, verificación de peer, etc.).
+The system MUST support SSL/TLS connections via `:ssl`, accepting all standard `:ssl.connect/3` options in `transport_options` (certificates, peer verification, etc.).
 
-#### Scenario: Conexión SSL
-- **WHEN** se configura `transport_mod: :ssl`
-- **THEN** se establece una conexión SSL/TLS
+#### Scenario: SSL connection
+- **WHEN** `transport_mod: :ssl` is configured
+- **THEN** an SSL/TLS connection is established
 
-### Requirement: I/O asincrónico
+### Requirement: Asynchronous I/O
 
-El sistema MUST recibir datos de red como mensajes del proceso (`:tcp` o `:ssl` tuples), siguiendo el modelo asincrónico de BEAM. MUST NOT hacer llamadas bloqueantes para leer datos.
+The system MUST receive network data as process messages (`:tcp` or `:ssl` tuples), following the BEAM asynchronous model. It MUST NOT make blocking calls to read data.
 
-#### Scenario: Recepción asincrónica TCP
-- **WHEN** llegan datos por una conexión TCP
-- **THEN** el proceso recibe un mensaje `{:tcp, socket, data}`
+#### Scenario: Asynchronous TCP reception
+- **WHEN** data arrives over a TCP connection
+- **THEN** the process receives a `{:tcp, socket, data}` message
 
-#### Scenario: Recepción asincrónica SSL
-- **WHEN** llegan datos por una conexión SSL
-- **THEN** el proceso recibe un mensaje `{:ssl, socket, data}`
+#### Scenario: Asynchronous SSL reception
+- **WHEN** data arrives over an SSL connection
+- **THEN** the process receives a `{:ssl, socket, data}` message
 
-### Requirement: Detección de desconexión
+### Requirement: Disconnection detection
 
-El sistema MUST detectar desconexiones via mensajes `:tcp_closed` o `:ssl_closed` del transporte y terminar el worker de sesión con razón `:closed`.
+The system MUST detect disconnections via `:tcp_closed` or `:ssl_closed` messages from the transport and terminate the session worker with reason `:closed`.
 
-#### Scenario: Desconexión TCP
-- **WHEN** la conexión TCP se cierra
-- **THEN** el proceso recibe `{:tcp_closed, socket}` y el worker termina con razón `:closed`
+#### Scenario: TCP disconnection
+- **WHEN** the TCP connection is closed
+- **THEN** the process receives `{:tcp_closed, socket}` and the worker terminates with reason `:closed`
 
-### Requirement: Error de conexión
+### Requirement: Connection error
 
-Si `connect/3` retorna `{:error, reason}`, el sistema MUST:
+If `connect/3` returns `{:error, reason}`, the system MUST:
 
-- Loguear el error
-- Terminar el SessionWorker con la razón del error
-- Actualizar el estado en el registry a `:reconnecting`
+- Log the error
+- Terminate the SessionWorker with the error reason
+- Update the state in the registry to `:reconnecting`
 
-#### Scenario: Error de conexión
-- **WHEN** `connect/3` retorna `{:error, :econnrefused}`
-- **THEN** se loguea el error, el worker termina y el registry marca `:reconnecting`
+#### Scenario: Connection error
+- **WHEN** `connect/3` returns `{:error, :econnrefused}`
+- **THEN** the error is logged, the worker terminates, and the registry marks `:reconnecting`
 
-### Requirement: Desconexión durante operación
+### Requirement: Disconnection during operation
 
-Si la conexión se cierra inesperadamente, el sistema MUST:
+If the connection closes unexpectedly, the system MUST:
 
-- Terminar el SessionWorker con razón `:closed`
-- Actualizar el estado en el registry a `:reconnecting`
+- Terminate the SessionWorker with reason `:closed`
+- Update the state in the registry to `:reconnecting`
 
-#### Scenario: Cierre inesperado
-- **WHEN** la conexión se cierra durante operación normal
-- **THEN** el worker termina con razón `:closed` y el registry marca `:reconnecting`
+#### Scenario: Unexpected close
+- **WHEN** the connection closes during normal operation
+- **THEN** the worker terminates with reason `:closed` and the registry marks `:reconnecting`
 
-### Requirement: Mensajes TCP parciales
+### Requirement: Partial TCP messages
 
-El sistema MUST manejar fragmentación TCP:
+The system MUST handle TCP fragmentation:
 
-- Mantener un buffer (`extra_bytes`) con datos incompletos entre recepciones
-- Concatenar datos nuevos con el buffer antes de parsear
-- Soportar múltiples mensajes FIX en un solo segmento TCP
+- Maintain a buffer (`extra_bytes`) with incomplete data between receptions
+- Concatenate new data with the buffer before parsing
+- Support multiple FIX messages in a single TCP segment
 
-#### Scenario: Fragmentación TCP
-- **WHEN** un mensaje FIX llega en dos segmentos TCP separados
-- **THEN** se bufferean los bytes parciales y se procesan al completarse
+#### Scenario: TCP fragmentation
+- **WHEN** a FIX message arrives in two separate TCP segments
+- **THEN** partial bytes are buffered and processed upon completion
 
-### Requirement: Procesamiento continuo
+### Requirement: Continuous processing
 
-Cuando un segmento TCP contiene múltiples mensajes FIX, el sistema MUST procesarlos secuencialmente hasta agotar los datos disponibles, sin esperar nuevos datos de red.
+When a TCP segment contains multiple FIX messages, the system MUST process them sequentially until all available data is exhausted, without waiting for new network data.
 
-#### Scenario: Múltiples mensajes en un segmento
-- **WHEN** un segmento TCP contiene 3 mensajes FIX completos
-- **THEN** los 3 se procesan secuencialmente sin esperar nuevos datos
+#### Scenario: Multiple messages in one segment
+- **WHEN** a TCP segment contains 3 complete FIX messages
+- **THEN** all 3 are processed sequentially without waiting for new data
 
-### Requirement: Transporte mockeable
+### Requirement: Mockable transport
 
-El contrato duck-typed MUST permitir inyectar un transporte de test que:
+The duck-typed contract MUST allow injecting a test transport that:
 
-- Simule conexiones sin red real
-- Capture mensajes enviados para verificación
-- Permita inyectar datos de recepción y eventos de desconexión
+- Simulates connections without a real network
+- Captures sent messages for verification
+- Allows injecting reception data and disconnection events
 
-#### Scenario: Test con transporte mock
-- **WHEN** se configura un módulo mock como `transport_mod`
-- **THEN** la sesión funciona sin red real y los mensajes son capturables
+#### Scenario: Test with mock transport
+- **WHEN** a mock module is configured as `transport_mod`
+- **THEN** the session works without a real network and messages are capturable

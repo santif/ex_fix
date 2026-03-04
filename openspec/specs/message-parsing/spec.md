@@ -1,169 +1,169 @@
-# Parsing y Serialización de Mensajes FIX
+# FIX Message Parsing and Serialization
 
 ## Purpose
 
-Sistema de parsing en dos fases y serialización de mensajes del protocolo FIX (FIXT.1.1).
+Two-phase parsing system and serialization of FIX protocol messages (FIXT.1.1).
 
 ## Requirements
 
-### Requirement: Parse fase 1 (extracción de headers)
+### Requirement: Phase 1 parse (header extraction)
 
-La fase 1 (`parse1`) MUST extraer del mensaje binario:
+Phase 1 (`parse1`) MUST extract from the binary message:
 
-- BeginString (tag 8) — MUST ser exactamente `FIXT.1.1`
-- BodyLength (tag 9) — tamaño del cuerpo en bytes
-- Checksum (tag 10) — suma módulo 256 de todos los bytes previos
-- MsgType (tag 35) — tipo de mensaje
-- MsgSeqNum (tag 34) — número de secuencia
-- PossDupFlag (tag 43) — flag de posible duplicado
-- Campos de subject definidos por el Dictionary (si aplica)
+- BeginString (tag 8) — MUST be exactly `FIXT.1.1`
+- BodyLength (tag 9) — body size in bytes
+- Checksum (tag 10) — modulo 256 sum of all preceding bytes
+- MsgType (tag 35) — message type
+- MsgSeqNum (tag 34) — sequence number
+- PossDupFlag (tag 43) — possible duplicate flag
+- Subject fields defined by the Dictionary (if applicable)
 
-La fase 1 MUST detenerse una vez extraídos los headers y campos de subject, dejando el resto del mensaje sin parsear en `rest_msg`.
+Phase 1 MUST stop once the headers and subject fields have been extracted, leaving the rest of the message unparsed in `rest_msg`.
 
-#### Scenario: Parse fase 1 exitoso
-- **WHEN** se invoca `parse1` con un mensaje FIX binario válido
-- **THEN** se extraen los headers y campos de subject, dejando el resto en `rest_msg`
+#### Scenario: Successful phase 1 parse
+- **WHEN** `parse1` is invoked with a valid binary FIX message
+- **THEN** headers and subject fields are extracted, leaving the rest in `rest_msg`
 
-### Requirement: Parse fase 2 (parsing completo)
+### Requirement: Phase 2 parse (complete parsing)
 
-La fase 2 (`parse2`) MUST completar el parsing de todos los campos restantes del mensaje. Si el mensaje ya está completo (fase 1 parseó todo), MUST ser idempotente.
+Phase 2 (`parse2`) MUST complete the parsing of all remaining fields in the message. If the message is already complete (phase 1 parsed everything), it MUST be idempotent.
 
-#### Scenario: Parse fase 2 completa campos restantes
-- **WHEN** se invoca `parse2` sobre un InMessage con `rest_msg` pendiente
-- **THEN** se parsean todos los campos restantes y `complete` se marca como true
+#### Scenario: Phase 2 completes remaining fields
+- **WHEN** `parse2` is invoked on an InMessage with pending `rest_msg`
+- **THEN** all remaining fields are parsed and `complete` is set to true
 
-#### Scenario: Parse fase 2 idempotente
-- **WHEN** se invoca `parse2` sobre un InMessage ya completo
-- **THEN** el mensaje no cambia
+#### Scenario: Phase 2 idempotent
+- **WHEN** `parse2` is invoked on an already complete InMessage
+- **THEN** the message does not change
 
-### Requirement: Parse combinado
+### Requirement: Combined parse
 
-MUST existir una función `parse/4` que encadene ambas fases para parsing sincrónico completo.
+There MUST exist a `parse/4` function that chains both phases for complete synchronous parsing.
 
-#### Scenario: Parse completo en una llamada
-- **WHEN** se invoca `parse` con un mensaje FIX binario
-- **THEN** se retorna un InMessage con todos los campos parseados
+#### Scenario: Complete parse in a single call
+- **WHEN** `parse` is invoked with a binary FIX message
+- **THEN** an InMessage with all fields parsed is returned
 
-### Requirement: Soporte de RawData (tags 95/96)
+### Requirement: RawData support (tags 95/96)
 
-Si el mensaje contiene tag 95 (RawDataLength), el parser MUST:
+If the message contains tag 95 (RawDataLength), the parser MUST:
 
-- Extraer la longitud declarada
-- Leer exactamente esa cantidad de bytes del tag 96 (RawData)
-- Preservar el contenido binario sin modificar (puede contener SOH)
+- Extract the declared length
+- Read exactly that number of bytes from tag 96 (RawData)
+- Preserve the binary content unmodified (may contain SOH)
 
-Si los bytes no coinciden con la longitud declarada, MUST marcar el mensaje como `:garbled`.
+If the bytes do not match the declared length, it MUST mark the message as `:garbled`.
 
-#### Scenario: RawData válido
-- **WHEN** se parsea un mensaje con tag 95=5 y tag 96 con exactamente 5 bytes
-- **THEN** se preserva el contenido binario del tag 96
+#### Scenario: Valid RawData
+- **WHEN** a message with tag 95=5 and tag 96 with exactly 5 bytes is parsed
+- **THEN** the binary content of tag 96 is preserved
 
-#### Scenario: RawData con longitud incorrecta
-- **WHEN** se parsea un mensaje con tag 95 cuya longitud no coincide con tag 96
-- **THEN** se marca el mensaje como `:garbled`
+#### Scenario: RawData with incorrect length
+- **WHEN** a message with tag 95 whose length does not match tag 96 is parsed
+- **THEN** the message is marked as `:garbled`
 
-### Requirement: Validación de BeginString
+### Requirement: BeginString validation
 
-El parser MUST verificar que el BeginString sea exactamente `FIXT.1.1`. Si no coincide, MUST marcar el mensaje con `error_reason: :begin_string_error`.
+The parser MUST verify that BeginString is exactly `FIXT.1.1`. If it does not match, it MUST mark the message with `error_reason: :begin_string_error`.
 
-#### Scenario: BeginString correcto
-- **WHEN** se parsea un mensaje con BeginString="FIXT.1.1"
-- **THEN** se procesa normalmente
+#### Scenario: Correct BeginString
+- **WHEN** a message with BeginString="FIXT.1.1" is parsed
+- **THEN** it is processed normally
 
-#### Scenario: BeginString incorrecto
-- **WHEN** se parsea un mensaje con BeginString distinto de "FIXT.1.1"
-- **THEN** se marca con `error_reason: :begin_string_error`
+#### Scenario: Incorrect BeginString
+- **WHEN** a message with BeginString other than "FIXT.1.1" is parsed
+- **THEN** it is marked with `error_reason: :begin_string_error`
 
-### Requirement: Validación de checksum
+### Requirement: Checksum validation
 
-Si la validación está habilitada, el parser MUST:
+If validation is enabled, the parser MUST:
 
-- Calcular la suma módulo 256 de todos los bytes previos al campo checksum
-- Comparar con el valor recibido en tag 10 (3 dígitos)
+- Calculate the modulo 256 sum of all bytes preceding the checksum field
+- Compare with the value received in tag 10 (3 digits)
 
-Si no coincide, MUST marcar el mensaje como `:garbled`.
+If they do not match, it MUST mark the message as `:garbled`.
 
-#### Scenario: Checksum correcto
-- **WHEN** se parsea un mensaje con checksum que coincide con el cálculo
-- **THEN** se procesa normalmente
+#### Scenario: Correct checksum
+- **WHEN** a message with a checksum matching the calculation is parsed
+- **THEN** it is processed normally
 
-#### Scenario: Checksum incorrecto
-- **WHEN** se parsea un mensaje con checksum que no coincide
-- **THEN** se marca como `:garbled`
+#### Scenario: Incorrect checksum
+- **WHEN** a message with a checksum that does not match is parsed
+- **THEN** it is marked as `:garbled`
 
-### Requirement: Validación de BodyLength
+### Requirement: BodyLength validation
 
-El parser MUST verificar que el valor de tag 9 coincida con el tamaño real del cuerpo del mensaje. Si no coincide, MUST marcar como `:garbled`.
+The parser MUST verify that the value of tag 9 matches the actual body size of the message. If it does not match, it MUST mark it as `:garbled`.
 
-#### Scenario: BodyLength correcto
-- **WHEN** tag 9 coincide con el tamaño real del cuerpo
-- **THEN** se procesa normalmente
+#### Scenario: Correct BodyLength
+- **WHEN** tag 9 matches the actual body size
+- **THEN** it is processed normally
 
-#### Scenario: BodyLength incorrecto
-- **WHEN** tag 9 no coincide con el tamaño real del cuerpo
-- **THEN** se marca como `:garbled`
+#### Scenario: Incorrect BodyLength
+- **WHEN** tag 9 does not match the actual body size
+- **THEN** it is marked as `:garbled`
 
-### Requirement: Validación de número de secuencia
+### Requirement: Sequence number validation
 
-El parser MUST validar el número de secuencia si se proporciona un `expected_seqnum`:
+The parser MUST validate the sequence number if an `expected_seqnum` is provided:
 
-- Si coincide: procesar normalmente
-- Si es mayor al esperado: marcar con `error_reason: :unexpected_seqnum` (el mensaje se parsea igualmente para poder encolarlo)
-- Si es menor: dejarlo al manejo de la capa de sesión
+- If it matches: process normally
+- If greater than expected: mark with `error_reason: :unexpected_seqnum` (the message is still parsed so it can be queued)
+- If less: leave it to the session layer handling
 
-#### Scenario: Secuencia esperada
-- **WHEN** se parsea un mensaje con número de secuencia igual al esperado
-- **THEN** se procesa normalmente
+#### Scenario: Expected sequence
+- **WHEN** a message with a sequence number equal to the expected one is parsed
+- **THEN** it is processed normally
 
-#### Scenario: Secuencia mayor a la esperada
-- **WHEN** se parsea un mensaje con número de secuencia mayor al esperado
-- **THEN** se marca con `error_reason: :unexpected_seqnum` pero se parsea el contenido
+#### Scenario: Sequence greater than expected
+- **WHEN** a message with a sequence number greater than expected is parsed
+- **THEN** it is marked with `error_reason: :unexpected_seqnum` but the content is still parsed
 
-### Requirement: Validación configurable
+### Requirement: Configurable validation
 
-La validación de checksum y body length MUST poder deshabilitarse via `validate_incoming_message: false`.
+Checksum and body length validation MUST be disableable via `validate_incoming_message: false`.
 
-#### Scenario: Validación deshabilitada
-- **WHEN** se parsea con `validate_incoming_message: false`
-- **THEN** no se verifican checksum ni body length
+#### Scenario: Validation disabled
+- **WHEN** parsing with `validate_incoming_message: false`
+- **THEN** checksum and body length are not verified
 
-### Requirement: Estructura de InMessage
+### Requirement: InMessage structure
 
-Un mensaje entrante parseado MUST contener:
+A parsed incoming message MUST contain:
 
-| Campo | Tipo | Descripción |
+| Field | Type | Description |
 |-------|------|-------------|
-| `valid` | boolean | true si la validación estructural pasó |
-| `complete` | boolean | true si todos los campos fueron parseados |
-| `msg_type` | string | Tipo de mensaje (tag 35) |
-| `subject` | string, lista, o nil | Campo(s) de routing del Dictionary |
+| `valid` | boolean | true if structural validation passed |
+| `complete` | boolean | true if all fields were parsed |
+| `msg_type` | string | Message type (tag 35) |
+| `subject` | string, list, or nil | Routing field(s) from the Dictionary |
 | `poss_dup` | boolean | PossDupFlag (tag 43) |
-| `fields` | [{tag, value}] | Campos parseados como pares tag-valor |
-| `seqnum` | integer | Número de secuencia (tag 34) |
-| `rest_msg` | binary | Porción sin parsear (entre fases) |
-| `other_msgs` | binary | Siguiente mensaje en el buffer TCP |
-| `original_fix_msg` | binary | Mensaje original completo |
-| `error_reason` | atom o nil | `:garbled`, `:begin_string_error`, `:unexpected_seqnum` |
+| `fields` | [{tag, value}] | Parsed fields as tag-value pairs |
+| `seqnum` | integer | Sequence number (tag 34) |
+| `rest_msg` | binary | Unparsed portion (between phases) |
+| `other_msgs` | binary | Next message in the TCP buffer |
+| `original_fix_msg` | binary | Complete original message |
+| `error_reason` | atom or nil | `:garbled`, `:begin_string_error`, `:unexpected_seqnum` |
 
-#### Scenario: InMessage válido y completo
-- **WHEN** se parsea un mensaje FIX válido con ambas fases
-- **THEN** `valid` es true, `complete` es true, y todos los campos están poblados
+#### Scenario: Valid and complete InMessage
+- **WHEN** a valid FIX message is parsed with both phases
+- **THEN** `valid` is true, `complete` is true, and all fields are populated
 
-### Requirement: Acceso a campos
+### Requirement: Field access
 
-MUST existir una función `get_field(msg, tag)` que retorne el valor de un campo por su tag, o nil si no existe.
+There MUST exist a `get_field(msg, tag)` function that returns the value of a field by its tag, or nil if it does not exist.
 
-#### Scenario: Campo existente
-- **WHEN** se invoca `get_field(msg, "55")`
-- **THEN** se retorna el valor del campo Symbol
+#### Scenario: Existing field
+- **WHEN** `get_field(msg, "55")` is invoked
+- **THEN** the value of the Symbol field is returned
 
-#### Scenario: Campo inexistente
-- **WHEN** se invoca `get_field(msg, "999")` para un tag que no existe en el mensaje
-- **THEN** se retorna nil
+#### Scenario: Non-existent field
+- **WHEN** `get_field(msg, "999")` is invoked for a tag that does not exist in the message
+- **THEN** nil is returned
 
-### Requirement: API fluida de construcción
+### Requirement: Fluent construction API
 
-MUST existir una API para construir mensajes de salida:
+There MUST exist an API for building outgoing messages:
 
 ```elixir
 OutMessage.new("D")
@@ -172,137 +172,137 @@ OutMessage.new("D")
 |> OutMessage.set_fields([{"38", 100}, {"40", "2"}])
 ```
 
-El usuario solo define el tipo de mensaje y los campos de aplicación. Los campos de header (BeginString, BodyLength, MsgSeqNum, SenderCompID, TargetCompID, SendingTime, Checksum) MUST ser gestionados automáticamente por el serializador.
+The user only defines the message type and application fields. The header fields (BeginString, BodyLength, MsgSeqNum, SenderCompID, TargetCompID, SendingTime, Checksum) MUST be managed automatically by the serializer.
 
-#### Scenario: Construcción de mensaje de aplicación
-- **WHEN** se construye un OutMessage con `new("D")` y se agregan campos
-- **THEN** se genera un struct con el tipo de mensaje y los campos definidos por el usuario
+#### Scenario: Application message construction
+- **WHEN** an OutMessage is built with `new("D")` and fields are added
+- **THEN** a struct with the message type and user-defined fields is generated
 
-### Requirement: Orden de campos
+### Requirement: Field order
 
-El serializador MUST generar campos en este orden:
+The serializer MUST generate fields in this order:
 
 1. BeginString (tag 8): `FIXT.1.1`
-2. BodyLength (tag 9): calculado
+2. BodyLength (tag 9): calculated
 3. MsgType (tag 35)
 4. MsgSeqNum (tag 34)
 5. SenderCompID (tag 49)
-6. PossDupFlag (tag 43) — solo en retransmisiones
+6. PossDupFlag (tag 43) — only on retransmissions
 7. SendingTime (tag 52)
-8. OrigSendingTime (tag 122) — solo en retransmisiones
+8. OrigSendingTime (tag 122) — only on retransmissions
 9. TargetCompID (tag 56)
-10. Campos extra de header y body del usuario
-11. Checksum (tag 10): calculado
+10. Extra header and user body fields
+11. Checksum (tag 10): calculated
 
-#### Scenario: Orden correcto en serialización
-- **WHEN** se serializa un OutMessage
-- **THEN** los campos del header aparecen en el orden especificado, seguidos de los campos del usuario y el checksum
+#### Scenario: Correct order in serialization
+- **WHEN** an OutMessage is serialized
+- **THEN** header fields appear in the specified order, followed by user fields and the checksum
 
-### Requirement: Cálculo automático de checksum y body length
+### Requirement: Automatic checksum and body length calculation
 
-El serializador MUST calcular automáticamente:
+The serializer MUST automatically calculate:
 
-- **BodyLength**: bytes entre el final de tag 9 y el inicio de tag 10
-- **Checksum**: suma módulo 256 de todos los bytes previos a tag 10, formateado como 3 dígitos con ceros a la izquierda
+- **BodyLength**: bytes between the end of tag 9 and the start of tag 10
+- **Checksum**: modulo 256 sum of all bytes preceding tag 10, formatted as 3 digits with leading zeros
 
-#### Scenario: Cálculo automático
-- **WHEN** se serializa un OutMessage
-- **THEN** BodyLength y Checksum se calculan correctamente sin intervención del usuario
+#### Scenario: Automatic calculation
+- **WHEN** an OutMessage is serialized
+- **THEN** BodyLength and Checksum are calculated correctly without user intervention
 
-### Requirement: Conversión de tipos
+### Requirement: Type conversion
 
-El serializador MUST convertir automáticamente:
+The serializer MUST automatically convert:
 
-| Tipo Elixir | Formato FIX |
-|-------------|-------------|
-| string | Latin-1 (desde UTF-8) |
-| integer | string decimal |
-| float | string con hasta 10 decimales, formato compacto |
+| Elixir Type | FIX Format |
+|-------------|------------|
+| string | Latin-1 (from UTF-8) |
+| integer | decimal string |
+| float | string with up to 10 decimals, compact format |
 | boolean | "Y" / "N" |
 | DateTime | `YYYYMMDD-HH:MM:SS.mmm` |
 | atom | string |
-| nil | string vacío |
+| nil | empty string |
 
-#### Scenario: Conversión de DateTime
-- **WHEN** se serializa un campo con valor `~U[2024-01-15 10:30:00.123Z]`
-- **THEN** se convierte a `"20240115-10:30:00.123"`
+#### Scenario: DateTime conversion
+- **WHEN** a field with value `~U[2024-01-15 10:30:00.123Z]` is serialized
+- **THEN** it is converted to `"20240115-10:30:00.123"`
 
-#### Scenario: Conversión de boolean
-- **WHEN** se serializa un campo con valor `true`
-- **THEN** se convierte a `"Y"`
+#### Scenario: Boolean conversion
+- **WHEN** a field with value `true` is serialized
+- **THEN** it is converted to `"Y"`
 
-### Requirement: Soporte de retransmisión
+### Requirement: Retransmission support
 
-Al serializar con `resend: true`, el serializador MUST agregar PossDupFlag="Y" y OrigSendingTime con el timestamp original.
+When serializing with `resend: true`, the serializer MUST add PossDupFlag="Y" and OrigSendingTime with the original timestamp.
 
-#### Scenario: Retransmisión de mensaje
-- **WHEN** se serializa un mensaje con `resend: true`
-- **THEN** se incluyen PossDupFlag="Y" y OrigSendingTime
+#### Scenario: Message retransmission
+- **WHEN** a message is serialized with `resend: true`
+- **THEN** PossDupFlag="Y" and OrigSendingTime are included
 
-### Requirement: Behaviour Dictionary
+### Requirement: Dictionary behaviour
 
-MUST existir un behaviour `Dictionary` con el callback:
+There MUST exist a `Dictionary` behaviour with the callback:
 
 ```elixir
 @callback subject(msg_type :: String.t()) :: String.t() | {String.t(), String.t()} | nil
 ```
 
-Que define qué campo(s) de un mensaje se usan como clave de routing.
+Which defines which field(s) of a message are used as routing key.
 
-#### Scenario: Dictionary con campo de routing
-- **WHEN** el Dictionary retorna `"1"` para un msg_type
-- **THEN** se extrae el tag 1 como subject del mensaje en fase 1
+#### Scenario: Dictionary with routing field
+- **WHEN** the Dictionary returns `"1"` for a msg_type
+- **THEN** tag 1 is extracted as the message subject in phase 1
 
-### Requirement: Patrones de routing soportados
+### Requirement: Supported routing patterns
 
-El Dictionary MUST soportar estos patrones de routing:
+The Dictionary MUST support these routing patterns:
 
-- **Campo único**: `def subject("8"), do: "1"` — extrae un campo como subject
-- **Dos campos**: `def subject("y"), do: ["1301", "1300"]` — extrae un par de campos como subject compuesto
-- **Sin routing**: `def subject(_), do: nil` — se parsea el mensaje completo en fase 1
+- **Single field**: `def subject("8"), do: "1"` — extracts one field as subject
+- **Two fields**: `def subject("y"), do: ["1301", "1300"]` — extracts a pair of fields as composite subject
+- **No routing**: `def subject(_), do: nil` — the message is fully parsed in phase 1
 
-#### Scenario: Routing con campo único
-- **WHEN** el Dictionary retorna un string para un msg_type
-- **THEN** se extrae ese campo como subject
+#### Scenario: Single field routing
+- **WHEN** the Dictionary returns a string for a msg_type
+- **THEN** that field is extracted as subject
 
-#### Scenario: Routing con dos campos
-- **WHEN** el Dictionary retorna una lista de dos strings para un msg_type
-- **THEN** se extraen ambos campos como subject compuesto
+#### Scenario: Two-field routing
+- **WHEN** the Dictionary returns a list of two strings for a msg_type
+- **THEN** both fields are extracted as composite subject
 
-#### Scenario: Sin routing
-- **WHEN** el Dictionary retorna nil
-- **THEN** se parsea el mensaje completo en fase 1
+#### Scenario: No routing
+- **WHEN** the Dictionary returns nil
+- **THEN** the message is fully parsed in phase 1
 
-### Requirement: Dictionary por defecto
+### Requirement: Default dictionary
 
-MUST existir un `DefaultDictionary` que retorne `nil` para todos los tipos de mensaje (sin routing, parsing completo en fase 1).
+There MUST exist a `DefaultDictionary` that returns `nil` for all message types (no routing, complete parsing in phase 1).
 
 #### Scenario: DefaultDictionary
-- **WHEN** se usa el DefaultDictionary
-- **THEN** todos los mensajes se parsean completamente en fase 1
+- **WHEN** the DefaultDictionary is used
+- **THEN** all messages are fully parsed in phase 1
 
-### Requirement: Manejo de mensajes parciales
+### Requirement: Partial message handling
 
-El parser MUST soportar datos TCP fragmentados:
+The parser MUST support fragmented TCP data:
 
-- Bufferear bytes incompletos entre recepciones
-- Concatenar datos nuevos con el buffer existente antes de parsear
-- Soportar múltiples mensajes FIX en un solo segmento TCP
+- Buffer incomplete bytes between receptions
+- Concatenate new data with the existing buffer before parsing
+- Support multiple FIX messages in a single TCP segment
 
-#### Scenario: Mensaje fragmentado en dos segmentos TCP
-- **WHEN** un mensaje FIX llega dividido en dos segmentos TCP
-- **THEN** se bufferean los bytes del primer segmento y se completa el parsing al recibir el segundo
+#### Scenario: Message fragmented across two TCP segments
+- **WHEN** a FIX message arrives split across two TCP segments
+- **THEN** bytes from the first segment are buffered and parsing completes upon receiving the second
 
-#### Scenario: Múltiples mensajes en un segmento
-- **WHEN** un segmento TCP contiene dos mensajes FIX completos
-- **THEN** ambos mensajes se parsean correctamente
+#### Scenario: Multiple messages in one segment
+- **WHEN** a TCP segment contains two complete FIX messages
+- **THEN** both messages are parsed correctly
 
-### Requirement: Optimización de parsing
+### Requirement: Parsing optimization
 
-Las funciones críticas del parser y serializador MUST usar `@compile {:inline, ...}` para reducir overhead de llamadas en el hot path.
+Critical parser and serializer functions MUST use `@compile {:inline, ...}` to reduce call overhead in the hot path.
 
-El parsing MUST usar pattern matching binario nativo de Erlang/OTP para extracción zero-copy.
+Parsing MUST use native Erlang/OTP binary pattern matching for zero-copy extraction.
 
-#### Scenario: Funciones críticas inlined
-- **WHEN** se compilan los módulos de parsing y serialización
-- **THEN** las funciones marcadas con `@compile {:inline, ...}` se inlinean
+#### Scenario: Critical functions inlined
+- **WHEN** parsing and serialization modules are compiled
+- **THEN** functions marked with `@compile {:inline, ...}` are inlined
