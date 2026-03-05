@@ -20,6 +20,29 @@ defmodule ExFix.TestHelper do
     end
 
     def on_logout(_session_id, _env), do: :ok
+
+    def on_error(session_name, error_type, details, env) do
+      test_pid = Map.get(env, :test_pid, self())
+      send(test_pid, {:on_error, session_name, error_type, details})
+    end
+  end
+
+  defmodule FixDummySessionHandlerNoError do
+    @behaviour ExFix.SessionHandler
+
+    def on_logon(session_name, env) do
+      send(self(), {:logon, session_name, env})
+    end
+
+    def on_app_message(session_name, msg_type, msg, env) do
+      send(self(), {:msg, session_name, msg_type, msg, env})
+    end
+
+    def on_session_message(session_name, msg_type, msg, env) do
+      send(self(), {:session_msg, session_name, msg_type, msg, env})
+    end
+
+    def on_logout(_session_id, _env), do: :ok
   end
 
   defmodule FixEmptySessionHandler do

@@ -231,11 +231,14 @@ defmodule ExFix.SessionWorker do
            name: fix_session_name,
            transport: transport,
            client: client,
+           session: session,
            log_outgoing_msg: log_outgoing_msg,
            tx_timer: tx_timer
          },
          resend \\ false
        ) do
+    %Session{config: %SessionConfig{session_handler: session_handler, env: env}} = session
+
     for msg <- msgs_to_send do
       data = Serializer.serialize(msg, DateTime.utc_now(), resend)
 
@@ -246,7 +249,18 @@ defmodule ExFix.SessionWorker do
         end)
       end
 
-      transport.send(client, data)
+      case transport.send(client, data) do
+        {:error, reason} ->
+          Logger.error(fn ->
+            "[fix.error] [#{fix_session_name}] Transport send error: #{inspect(reason)}"
+          end)
+
+          maybe_notify_error(session_handler, fix_session_name, :transport_error, %{reason: reason}, env)
+
+        _ ->
+          :ok
+      end
+
       send(tx_timer, :msg)
     end
 
@@ -281,6 +295,8 @@ defmodule ExFix.SessionWorker do
 
       {:error, reason} ->
         Logger.error("Cannot open socket: #{inspect(reason)}")
+        %SessionConfig{session_handler: session_handler, env: env} = config
+        maybe_notify_error(session_handler, fix_session_name, :connect_error, %{reason: reason}, env)
         {:stop, reason, state}
     end
   end
@@ -291,5 +307,18 @@ defmodule ExFix.SessionWorker do
     rx_timer = SessionTimer.setup_timer(:rx, interval)
     session_registry.session_update_status(name, :connected)
     rx_timer
+  end
+
+  defp maybe_notify_error(session_handler, session_name, error_type, details, env) do
+    if function_exported?(session_handler, :on_error, 4) do
+      try do
+        session_handler.on_error(session_name, error_type, details, env)
+      rescue
+        e ->
+          Logger.error(fn ->
+            "[fix.error] [#{session_name}] on_error callback raised: #{inspect(e)}"
+          end)
+      end
+    end
   end
 end

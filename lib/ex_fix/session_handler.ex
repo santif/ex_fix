@@ -48,4 +48,25 @@ defmodule ExFix.SessionHandler do
   disconnection, which occurs first.
   """
   @callback on_logout(session_name :: Session.session_name(), env :: map()) :: any()
+
+  @doc """
+  Called when a session-level error occurs.
+
+  Error types:
+  - `:connect_error` — TCP/SSL connection failure. Details: `%{reason: term()}`
+  - `:transport_error` — TCP/SSL send failure. Details: `%{reason: term()}`
+  - `:garbled_message` — message failed checksum or body-length validation. Details: `%{raw_message: binary()}`
+  - `:heartbeat_timeout` — counterparty heartbeat not received within tolerance. Details: `%{}`
+
+  This callback is optional. Handlers that do not implement it will not receive
+  error notifications.
+  """
+  @callback on_error(
+              session_name :: Session.session_name(),
+              error_type :: atom(),
+              details :: map(),
+              env :: map()
+            ) :: any()
+
+  @optional_callbacks [on_error: 4]
 end

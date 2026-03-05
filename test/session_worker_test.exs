@@ -206,4 +206,91 @@ defmodule ExFix.SessionWorkerTest do
     assert Parser.parse(logout, DefaultDictionary, 1).msg_type == "5"
     assert_receive {:DOWN, ^ref, :process, ^pid, :normal}, 1000
   end
+
+  ##
+  ## on_error callback tests
+  ##
+
+  defmodule FailConnectTransport do
+    def connect(_host, _port, _options) do
+      {:error, :econnrefused}
+    end
+
+    def send(_conn, _data), do: :ok
+    def close(_conn), do: :ok
+  end
+
+  defmodule FailSendTransport do
+    def connect(_host, _port, options) do
+      {:ok, options[:test_pid]}
+    end
+
+    def send(_conn, _data) do
+      {:error, :closed}
+    end
+
+    def close(_conn), do: :ok
+
+    def receive_data(session_name, data, socket_protocol \\ :tcp) do
+      Process.send(:"ex_fix_session_#{session_name}", {socket_protocol, self(), data}, [])
+    end
+  end
+
+  defmodule ErrorNotifyHandler do
+    @behaviour ExFix.SessionHandler
+
+    def on_logon(_session_name, _env), do: :ok
+    def on_app_message(_session_name, _msg_type, _msg, _env), do: :ok
+    def on_session_message(_session_name, _msg_type, _msg, _env), do: :ok
+    def on_logout(_session_name, _env), do: :ok
+
+    def on_error(_session_name, error_type, details, env) do
+      send(env.test_pid, {:on_error, error_type, details})
+    end
+  end
+
+  test "on_error receives :connect_error when transport.connect fails" do
+    Process.flag(:trap_exit, true)
+
+    cfg = %SessionConfig{
+      name: "connect_err",
+      mode: :initiator,
+      sender_comp_id: "SENDER",
+      target_comp_id: "TARGET",
+      session_handler: ErrorNotifyHandler,
+      dictionary: DefaultDictionary,
+      transport_mod: FailConnectTransport,
+      transport_options: [test_pid: self()],
+      env: %{test_pid: self()}
+    }
+
+    {:ok, pid} = SessionWorker.start_link(cfg, TestSessionRegistry)
+
+    assert_receive {:on_error, :connect_error, %{reason: :econnrefused}}, 1000
+    assert_receive {:EXIT, ^pid, :econnrefused}, 1000
+  end
+
+  test "on_error receives :transport_error when transport.send fails" do
+    Process.flag(:trap_exit, true)
+
+    cfg = %SessionConfig{
+      name: "send_err",
+      mode: :initiator,
+      sender_comp_id: "SENDER",
+      target_comp_id: "TARGET",
+      session_handler: ErrorNotifyHandler,
+      dictionary: DefaultDictionary,
+      transport_mod: FailSendTransport,
+      transport_options: [test_pid: self()],
+      env: %{test_pid: self()}
+    }
+
+    {:ok, pid} = SessionWorker.start_link(cfg, TestSessionRegistry)
+
+    # The logon message send will fail, triggering :transport_error
+    assert_receive {:on_error, :transport_error, %{reason: :closed}}, 1000
+    # Clean up
+    Process.exit(pid, :kill)
+    assert_receive {:EXIT, ^pid, :killed}, 1000
+  end
 end
