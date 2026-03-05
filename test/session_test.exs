@@ -1319,4 +1319,76 @@ defmodule ExFix.SessionTest do
 
     assert_receive {:session_msg, "test", @msg_type_reject, %InMessage{seqnum: 99}, _env}
   end
+
+  ##
+  ## on_error callback tests
+  ##
+
+  test "on_error receives :garbled_message for garbled FIX message", %{config: cfg} do
+    cfg = %SessionConfig{cfg | env: %{test_pid: self()}}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    incoming_data = msg("8=FIXT.1.1|9=$$$|garbled|10=$$$|")
+    {:ok, _msgs_to_send, _session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert_receive {:on_error, "test", :garbled_message, %{raw_message: _raw}}
+  end
+
+  test "handler without on_error/4 does not crash on garbled messages", %{config: cfg} do
+    cfg = %SessionConfig{
+      cfg
+      | session_handler: ExFix.TestHelper.FixDummySessionHandlerNoError
+    }
+
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    incoming_data = msg("8=FIXT.1.1|9=$$$|garbled|10=$$$|")
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert msgs_to_send == []
+  end
+
+  test "on_error receives :heartbeat_timeout on second consecutive RX timeout", %{config: cfg} do
+    cfg = %SessionConfig{cfg | env: %{test_pid: self()}}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    # First timeout: sends TestRequest, no on_error
+    {:ok, _msgs, session} = Session.handle_timeout(session, :rx)
+    refute_receive {:on_error, _, :heartbeat_timeout, _}
+
+    # Second timeout: triggers logout and on_error
+    {:logout, _msgs, _session} = Session.handle_timeout(session, :rx)
+    assert_receive {:on_error, "test", :heartbeat_timeout, %{}}
+  end
+
+  test "on_error/4 exceptions are rescued without crashing the session", %{config: cfg} do
+    defmodule RaisingHandler do
+      @behaviour ExFix.SessionHandler
+
+      def on_logon(_session_name, _env), do: :ok
+      def on_app_message(_session_name, _msg_type, _msg, _env), do: :ok
+      def on_session_message(_session_name, _msg_type, _msg, _env), do: :ok
+      def on_logout(_session_name, _env), do: :ok
+
+      def on_error(_session_name, _error_type, _details, _env) do
+        raise "intentional test error"
+      end
+    end
+
+    cfg = %SessionConfig{cfg | session_handler: RaisingHandler}
+    {:ok, session} = Session.init(cfg)
+    session = %Session{session | status: :online, in_lastseq: 10, out_lastseq: 5}
+
+    incoming_data = msg("8=FIXT.1.1|9=$$$|garbled|10=$$$|")
+
+    # Should not raise despite handler raising
+    {:ok, msgs_to_send, session} = Session.handle_incoming_data(session, incoming_data)
+
+    assert Session.get_status(session) == :online
+    assert msgs_to_send == []
+  end
 end

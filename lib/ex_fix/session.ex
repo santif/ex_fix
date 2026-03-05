@@ -530,6 +530,19 @@ defmodule ExFix.Session do
   end
 
   def handle_timeout(%Session{config: config, out_lastseq: out_lastseq} = session, :rx) do
+    %SessionConfig{name: session_name, session_handler: session_handler, env: env} = config
+
+    if function_exported?(session_handler, :on_error, 4) do
+      try do
+        session_handler.on_error(session_name, :heartbeat_timeout, %{}, env)
+      rescue
+        e ->
+          Logger.error(fn ->
+            "[fix.error] [#{session_name}] on_error callback raised: #{inspect(e)}"
+          end)
+      end
+    end
+
     out_lastseq = out_lastseq + 1
     text = "Data not received"
     logout_msg = build_message(config, @msg_type_logout, out_lastseq, [{@field_text, text}])
@@ -604,13 +617,25 @@ defmodule ExFix.Session do
         _expected_seqnum,
         %InMessage{valid: false, error_reason: :garbled} = msg
       ) do
+    %Session{config: %SessionConfig{name: session_name, session_handler: session_handler, env: env}} =
+      session
+
     if @warning_on_garbled_messages do
       Logger.warning(fn ->
-        %Session{config: %SessionConfig{name: session_name}} = session
-
         "[fix.warning] [#{session_name}] Garbled: " <>
           :unicode.characters_to_binary(msg.original_fix_msg, :latin1, :utf8)
       end)
+    end
+
+    if function_exported?(session_handler, :on_error, 4) do
+      try do
+        session_handler.on_error(session_name, :garbled_message, %{raw_message: msg.original_fix_msg}, env)
+      rescue
+        e ->
+          Logger.error(fn ->
+            "[fix.error] [#{session_name}] on_error callback raised: #{inspect(e)}"
+          end)
+      end
     end
 
     {:ok, [], %Session{session | extra_bytes: msg.other_msgs}}
